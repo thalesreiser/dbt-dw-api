@@ -1,0 +1,9 @@
+version: 2
+
+# RF-01: fontes (Parquet do P1 ou carga direta dos dados abertos da CVM)
+sources:
+  - name: cvm
+    schema: raw
+    tables:
+      - name: informe_diario
+      - name: cadastro_fundos

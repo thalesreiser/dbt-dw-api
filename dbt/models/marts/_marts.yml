@@ -1,0 +1,4 @@
+version: 2
+
+# RF-03: dim_fundo, dim_data, fct_informe_diario, fct_captacao_mensal
+models: []

@@ -1,0 +1,9 @@
+# RNF-04: execução via Docker Compose
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    env_file: ../.env
+    ports: ["8000:8000"]
+    volumes: ["../data:/app/data:ro"]
