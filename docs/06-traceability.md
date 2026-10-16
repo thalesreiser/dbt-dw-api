@@ -1,8 +1,8 @@
-# 06 - Matriz de rastreabilidade
+# 06 - Traceability matrix
 
-| Requisito | Componente | Teste | Status |
+| Requirement | Component | Test | Status |
 |---|---|---|---|
-| RF-01 | `dbt/models/staging/_sources.yml`, `scripts/carga_direta.py` | | ⬜ |
+| RF-01 | `dbt/models/staging/_sources.yml`, `scripts/direct_load.py` | | ⬜ |
 | RF-02 | `dbt/models/staging/` | | ⬜ |
 | RF-03 | `dbt/models/marts/` | | ⬜ |
 | RF-04 | `dbt/snapshots/` | | ⬜ |
@@ -13,8 +13,8 @@
 | RF-09 | `fundos_api` | | ⬜ |
 | RF-10 | `fundos_api` | | ⬜ |
 | RF-11 | CI (Schemathesis) | | ⬜ |
-| RNF-01 | teste de carga (locust/hey) | | ⬜ |
+| RNF-01 | load test (locust/hey) | | ⬜ |
 
-## Controle de mudanças
-| Data | Mudança | Motivo | ADR |
+## Change log
+| Date | Change | Reason | ADR |
 |---|---|---|---|

@@ -1,4 +1,4 @@
-# RNF-04: execução via Docker Compose
+# RNF-04: runs via Docker Compose
 services:
   api:
     build:

@@ -1,12 +1,12 @@
-# 001 - DuckDB vs Athena como warehouse
+# 001 - DuckDB vs Athena as the warehouse
 
-- **Status:** proposto
-- **Data:** AAAA-MM-DD
+- **Status:** proposed
+- **Date:** YYYY-MM-DD
 
-## Contexto
+## Context
 
-## Decisão
+## Decision
 
-## Alternativas consideradas
+## Alternatives considered
 
-## Consequências
+## Consequences

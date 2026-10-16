@@ -1,6 +1,6 @@
 version: 2
 
-# RF-01: fontes (Parquet do P1 ou carga direta dos dados abertos da CVM)
+# RF-01: sources (Parquet from P1 or a direct load of CVM open data)
 sources:
   - name: cvm
     schema: raw

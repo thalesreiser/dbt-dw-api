@@ -1,7 +1,7 @@
 [project]
 name = "fundos-api"
 version = "0.1.0"
-description = "Data Warehouse com dbt, qualidade e API REST sobre dados de fundos"
+description = "Data warehouse with dbt, data quality and a REST API on investment fund data"
 requires-python = ">=3.11,<3.12"
 dependencies = [
   "fastapi>=0.115",
