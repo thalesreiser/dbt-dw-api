@@ -5,11 +5,13 @@
 ![dbt](https://img.shields.io/badge/dbt-1.8-FF694B?logo=dbt&logoColor=white)
 ![DuckDB](https://img.shields.io/badge/DuckDB-1.1-FFF000?logo=duckdb&logoColor=black)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
-![Licença](https://img.shields.io/badge/licen%C3%A7a-propriet%C3%A1ria-lightgrey)
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green)](LICENSE)
 
 > Data warehouse dimensional modelado com **dbt** sobre **DuckDB**, com testes de qualidade, histórico de mudanças (SCD tipo 2) e documentação com linhagem, exposto por uma **API REST** somente leitura em **FastAPI** com contrato OpenAPI testado.
 
 **Status:** 🚧 em desenvolvimento · Épico 1 de 7 (Fundações)
+
+> 🇬🇧 **In English:** A dimensional data warehouse (star schema) modeled with **dbt** on **DuckDB**, with data quality tests, SCD type 2 snapshots and generated lineage docs, served through a read-only **FastAPI** REST API with API-key auth, rate limiting and OpenAPI contract tests (Schemathesis). Uses the investment fund data produced by `aws-fundos-pipeline`.
 
 ---
 
@@ -209,11 +211,9 @@ Para desenvolver: `make install`, `make lint`, `make test`, `make docs` (documen
 
 ## Licença
 
-Copyright © 2026 Thales Reiser Pedreira. **Todos os direitos reservados.**
-
-O código pode ser lido e executado localmente para avaliação técnica; cópia, redistribuição, obras derivadas e uso comercial exigem autorização por escrito. Veja [`LICENSE`](LICENSE) e [`POLITICA-DE-USO.md`](POLITICA-DE-USO.md).
+Código sob a licença [MIT](LICENSE): pode ser usado, copiado e modificado, inclusive comercialmente, desde que o aviso de copyright de **Thales Reiser Pedreira** seja mantido. Regras sobre os dados e a segurança estão em [`POLITICA-DE-USO.md`](POLITICA-DE-USO.md).
 
 ## Autor
 
-**Thales Reiser Pedreira**, desenvolvedor Python e HPCC com experiência em DevOps e infraestrutura.
-[GitHub](https://github.com/thalesreiser) · [LinkedIn](https://www.linkedin.com/in/thalesreiser/)
+**Thales Reiser Pedreira**, Engenheiro de Dados e de Software · Python, SQL, AWS e Big Data.
+[GitHub](https://github.com/thalesreiser) · [LinkedIn](https://www.linkedin.com/in/thalesreiserpedreira)
