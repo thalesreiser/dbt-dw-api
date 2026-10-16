@@ -1,4 +1,4 @@
-DBT = dbt --project-dir dbt --profiles-dir dbt
+DBT_ARGS = --project-dir dbt --profiles-dir dbt
 
 .PHONY: install up down deps build docs api lint fmt test
 
@@ -12,13 +12,13 @@ down:
 	docker compose -f infra/docker-compose.yml down
 
 deps:
-	$(DBT) deps
+	dbt deps $(DBT_ARGS)
 
 build: deps  ## RNF-02: falha se qualquer teste falhar
-	$(DBT) build
+	dbt build $(DBT_ARGS)
 
 docs:  ## RF-06
-	$(DBT) docs generate
+	dbt docs generate $(DBT_ARGS)
 
 api:
 	uvicorn fundos_api.main:app --reload
