@@ -16,4 +16,4 @@ jobs:
       - run: make lint
       - run: make test
       - run: make deps && dbt parse --project-dir dbt --profiles-dir dbt
-      # Épico 7.1: dbt build sobre amostra + Schemathesis contra a OpenAPI
+      # Task 7.1: dbt build on a sample + Schemathesis against the OpenAPI spec

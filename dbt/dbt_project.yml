@@ -11,7 +11,7 @@ seed-paths: ["seeds"]
 target-path: target
 clean-targets: [target, dbt_packages]
 
-# RNF-05: camadas staging -> intermediate -> marts
+# RNF-05: staging -> intermediate -> marts layers
 models:
   fundos_dw:
     staging:

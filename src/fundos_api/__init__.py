@@ -1,1 +1,1 @@
-"""API REST somente leitura sobre o warehouse de fundos."""
+"""Read-only REST API over the investment fund warehouse."""

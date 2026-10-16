@@ -14,7 +14,7 @@ down:
 deps:
 	dbt deps $(DBT_ARGS)
 
-build: deps  ## RNF-02: falha se qualquer teste falhar
+build: deps  ## RNF-02: fails if any test fails
 	dbt build $(DBT_ARGS)
 
 docs:  ## RF-06
