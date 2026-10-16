@@ -17,3 +17,25 @@ jobs:
       - run: make test
       - run: make deps && dbt parse --project-dir dbt --profiles-dir dbt
       # Task 7.1: dbt build on a sample + Schemathesis against the OpenAPI spec
+
+  # RF-01 acceptance: load one real reference month from the CVM open data (R-P3-01),
+  # then prove the sources exist with `dbt source freshness` and a row count per source.
+  sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DUCKDB_PATH: data/warehouse.duckdb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dbt]"
+      - name: Load the previous reference month from CVM
+        run: make load
+      - name: dbt source freshness
+        run: make deps freshness
+      - name: Row count per source
+        run: make row-counts
+      - name: Source tests
+        run: dbt test --select "source:*" --project-dir dbt --profiles-dir dbt
