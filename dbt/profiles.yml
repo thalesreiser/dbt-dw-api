@@ -1,7 +1,8 @@
+# Paths are relative to the repository root (dbt runs with --project-dir dbt from there).
 fundos_dw:
   target: dev
   outputs:
     dev:
       type: duckdb
-      path: "{{ env_var('DUCKDB_PATH', '../data/warehouse.duckdb') }}"
+      path: "{{ env_var('DUCKDB_PATH', 'data/warehouse.duckdb') }}"
       threads: 4
