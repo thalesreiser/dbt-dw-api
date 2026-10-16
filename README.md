@@ -148,7 +148,19 @@ make build                                               # dbt build: models + t
 curl -H "X-API-Key: $API_KEY" localhost:8000/v1/fundos   # first query
 ```
 
-No data from P1 yet? Run `python scripts/direct_load.py` to load straight from CVM (R-P3-01).
+**Loading the sources (RF-01).** No data from P1 yet? Load straight from the CVM open data
+(R-P3-01) into `data/warehouse.duckdb` (override with `DUCKDB_PATH`), then check the sources:
+
+```bash
+make load                                     # previous reference month (~19 MB download)
+make load COMPETENCIA=2026-09 COMPETENCIAS=3  # 2026-07..2026-09; reloading a month replaces it
+make load-p1 P1_PATH=/path/to/p1/gold         # P1 Parquet, once available
+make freshness                                # dbt source freshness
+make row-counts                               # row count per source (fails if one is empty)
+```
+
+Source URLs, layouts and the registry choice after CVM Resolution 175 are in
+[docs/data-source.md](docs/data-source.md) and [ADR 005](docs/adr/005-cvm-registry-after-resolution-175.md).
 
 For development: `make install`, `make lint`, `make test`, `make docs` (dbt documentation and lineage) and `make api` (server with reload).
 
@@ -161,8 +173,8 @@ For development: `make install`, `make lint`, `make test`, `make docs` (dbt docu
 │   ├── models/marts/         # dim_* and fct_*
 │   ├── snapshots/            # SCD2 of the registry
 │   └── tests/                # singular business rule tests
-├── src/fundos_api/           # FastAPI (read-only)
-├── scripts/direct_load.py    # fallback load without P1
+├── src/fundos_api/           # FastAPI (read-only) + ingestion helpers
+├── scripts/direct_load.py    # source loader: CVM direct (fallback) or P1 Parquet
 ├── tests/                    # API pytest suite
 ├── infra/                    # Dockerfile + docker-compose
 ├── docs/                     # requirements (01–06) and ADRs
@@ -199,7 +211,8 @@ For development: `make install`, `make lint`, `make test`, `make docs` (dbt docu
 | [04 - Architecture](docs/04-architecture.md) | Simplified C4 |
 | [05 - Validation](docs/05-validation.md) | Acceptance criteria execution |
 | [06 - Traceability](docs/06-traceability.md) | Requirement → component → test |
-| [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache |
+| [Data source](docs/data-source.md) | CVM files, layouts, encoding and key mapping (RF-01) |
+| [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175 |
 
 ## Related projects
 
