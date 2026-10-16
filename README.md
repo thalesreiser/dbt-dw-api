@@ -138,6 +138,22 @@ CI fails if any test in `dbt build` fails (RNF-02). There is also a **negative t
 | Container | Docker + Docker Compose | Reproducibility |
 | CI | GitHub Actions | `dbt build` + API tests |
 
+## Develop in GitHub Codespaces
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/thalesreiser/dbt-dw-api?quickstart=1)
+
+The repository ships a dev container (`.devcontainer/`), so the whole environment runs in the cloud and nothing needs to be installed locally. The codespace is created on a 2-core / 8 GB machine with Python 3.11, dbt, DuckDB, Docker and make preinstalled; dependencies and pre-commit hooks are set up on creation.
+
+```bash
+make build   # dbt build: models + tests
+make api     # FastAPI with reload
+make test    # API tests
+```
+
+Forwarded port: FastAPI (8000), with the interactive docs at `/docs`.
+
+Codespaces consume the monthly quota of the GitHub account: **stop** the codespace when you are not using it (it also stops after 30 minutes idle) and **delete** it at the end of a phase. The same configuration works locally with Docker Desktop and the VS Code *Dev Containers* extension.
+
 ## How to run
 
 **Prerequisites:** Docker with Docker Compose and Python 3.11.
