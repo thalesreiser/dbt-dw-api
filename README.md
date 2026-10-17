@@ -158,10 +158,16 @@ CI fails if any test in `dbt build` fails (RNF-02). There is also a **negative t
 **Prerequisites:** Docker with Docker Compose and Python 3.11.
 
 ```bash
-make up                                                  # start the warehouse + API
+pip install -e ".[dev,dbt]"                              # Python 3.11 environment
+cp .env.example .env                                     # required by `make up` (API settings)
+make load                                                # load a CVM month into DuckDB (below)
 make build                                               # dbt build: models + tests
-curl -H "X-API-Key: $API_KEY" localhost:8000/v1/fundos   # first query
+make up                                                  # start the API on localhost:8000
+curl localhost:8000/health                               # health check
 ```
+
+The endpoints `/v1/...` with the `X-API-Key` header arrive with epic 5 (RF-07 to RF-10); today
+the API only serves `/health`.
 
 **Loading the sources (RF-01).** No data from P1 yet? Load straight from the CVM open data
 (R-P3-01) into `data/warehouse.duckdb` (override with `DUCKDB_PATH`), then check the sources:
