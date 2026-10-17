@@ -41,45 +41,60 @@ flowchart LR
 | `intermediate` | Reusable joins and business rules | ephemeral |
 | `marts` | Dimensions and facts ready for consumption | table / incremental |
 
+Model names, column prefixes (`id_`, `cnpj_`, `dt_`, `vl_`, `nr_`, `tp_`, `sit_`, `fl_`, `nm_`...)
+and types follow one convention across layers: [docs/naming-conventions.md](docs/naming-conventions.md) (RNF-05).
+
+### Staging models (RF-02)
+
+One view per source, renamed, typed and standardized; documented and tested in
+[`_stg_cvm__models.yml`](dbt/models/staging/_stg_cvm__models.yml). Grain and deduplication:
+[ADR 006](docs/adr/006-staging-grain-and-deduplication.md).
+
+| Model | Source | Grain | Rows (2026-09 / registry of 2026-10-17) |
+|---|---|---|---|
+| `stg_cvm__informe_diario` | `cvm.informe_diario` | 1 row per class/subclass per day (`cnpj_fundo_classe`, `id_subclasse`, `dt_competencia`) | 538,099 (no rows dropped) |
+| `stg_cvm__cadastro_fundos` | `cvm.cadastro_fundos` | 1 row per fund registry id (`id_registro_fundo`); source has one row per fund and manager | 89,502 (from 90,646) |
+| `stg_cvm__cadastro_classes` | `cvm.cadastro_classes` | 1 row per class registry id (`id_registro_classe`) | 36,865 (from 36,869) |
+
 ## Dimensional model
 
 Star schema (Kimball). Every fact has an explicit grain:
 
 ```mermaid
 erDiagram
-  dim_fundo ||--o{ fct_informe_diario : "fundo_sk"
-  dim_data  ||--o{ fct_informe_diario : "data_sk"
-  dim_fundo ||--o{ fct_captacao_mensal : "fundo_sk"
-  dim_data  ||--o{ fct_captacao_mensal : "mes_sk"
+  dim_fundo ||--o{ fct_informe_diario : "sk_fundo"
+  dim_data  ||--o{ fct_informe_diario : "sk_data"
+  dim_fundo ||--o{ fct_captacao_mensal : "sk_fundo"
+  dim_data  ||--o{ fct_captacao_mensal : "sk_mes"
 
   dim_fundo {
-    string fundo_sk PK
+    string sk_fundo PK
     string cnpj_fundo
-    string denominacao
-    string classe
-    string situacao
-    date valido_de
-    date valido_ate
+    string nm_denominacao_social
+    string tp_classe
+    string sit_fundo
+    date dt_valido_de
+    date dt_valido_ate
   }
   dim_data {
-    date data_sk PK
-    int ano
-    int mes
-    boolean dia_util
+    date sk_data PK
+    int nr_ano
+    int nr_mes
+    boolean fl_dia_util
   }
   fct_informe_diario {
-    string fundo_sk FK
-    date data_sk FK
-    decimal valor_cota
-    decimal patrimonio_liquido
-    decimal captacao_dia
-    decimal resgate_dia
-    int nr_cotistas
+    string sk_fundo FK
+    date sk_data FK
+    decimal vl_quota
+    decimal vl_patrim_liq
+    decimal vl_captc_dia
+    decimal vl_resg_dia
+    int nr_cotst
   }
   fct_captacao_mensal {
-    string fundo_sk FK
-    date mes_sk FK
-    decimal captacao_liquida
+    string sk_fundo FK
+    date sk_mes FK
+    decimal vl_captc_liquida
   }
 ```
 
@@ -94,7 +109,7 @@ Table and column names follow the source domain in Portuguese (`fundo` = fund, `
 
 ### History with SCD type 2
 
-When a fund changes its name, class or status in the registry, `dbt snapshot` does **not** overwrite the record: it closes the old version (`valido_ate`) and opens a new one. A 2024 fact therefore keeps pointing to the fund as it was in 2024.
+When a fund changes its name, class or status in the registry, `dbt snapshot` does **not** overwrite the record: it closes the old version (`dt_valido_ate`) and opens a new one. A 2024 fact therefore keeps pointing to the fund as it was in 2024.
 
 ## API
 
@@ -157,6 +172,7 @@ make load COMPETENCIA=2026-09 COMPETENCIAS=3  # 2026-07..2026-09; reloading a mo
 make load-p1 P1_PATH=/path/to/p1/gold         # P1 Parquet, once available
 make freshness                                # dbt source freshness
 make row-counts                               # row count per source (fails if one is empty)
+make staging                                  # RF-02: build the stg_ models + their tests
 ```
 
 Source URLs, layouts and the registry choice after CVM Resolution 175 are in
@@ -172,7 +188,8 @@ For development: `make install`, `make lint`, `make test`, `make docs` (dbt docu
 │   ├── models/intermediate/  # int_*
 │   ├── models/marts/         # dim_* and fct_*
 │   ├── snapshots/            # SCD2 of the registry
-│   └── tests/                # singular business rule tests
+│   ├── macros/               # standardization helpers, schema naming, row counts
+│   └── tests/                # generic (CNPJ) and singular tests, per layer
 ├── src/fundos_api/           # FastAPI (read-only) + ingestion helpers
 ├── scripts/direct_load.py    # source loader: CVM direct (fallback) or P1 Parquet
 ├── tests/                    # API pytest suite
@@ -212,7 +229,8 @@ For development: `make install`, `make lint`, `make test`, `make docs` (dbt docu
 | [05 - Validation](docs/05-validation.md) | Acceptance criteria execution |
 | [06 - Traceability](docs/06-traceability.md) | Requirement → component → test |
 | [Data source](docs/data-source.md) | CVM files, layouts, encoding and key mapping (RF-01) |
-| [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175 |
+| [Naming conventions](docs/naming-conventions.md) | Layers, model names, column prefixes and types (RNF-05) |
+| [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175, staging grain and deduplication |
 
 ## Related projects
 
