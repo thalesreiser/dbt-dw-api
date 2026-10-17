@@ -8,7 +8,7 @@ COMPETENCIA ?=
 COMPETENCIAS ?= 1
 LOAD_ARGS = --competencias $(COMPETENCIAS) $(if $(COMPETENCIA),--competencia $(COMPETENCIA),)
 
-.PHONY: install up down deps load load-p1 freshness row-counts sources build docs api lint fmt test
+.PHONY: install up down deps load load-p1 freshness row-counts sources staging build docs api lint fmt test
 
 install:
 	pip install -e ".[dev,dbt]" && pre-commit install
@@ -36,6 +36,9 @@ row-counts:  ## RF-01: row count per source (fails if a source is empty)
 
 sources: deps freshness row-counts  ## RF-01: freshness + row counts + source tests
 	dbt test --select "source:*" $(DBT_ARGS)
+
+staging: deps  ## RF-02: build the stg_ models and run their tests (and the source tests)
+	dbt build --select staging $(DBT_ARGS)
 
 build: deps  ## RNF-02: fails if any test fails
 	dbt build $(DBT_ARGS)

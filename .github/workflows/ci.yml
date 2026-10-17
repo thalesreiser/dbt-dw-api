@@ -20,6 +20,7 @@ jobs:
 
   # RF-01 acceptance: load one real reference month from the CVM open data (R-P3-01),
   # then prove the sources exist with `dbt source freshness` and a row count per source.
+  # RF-02: the same job builds the staging models and runs their tests against that month.
   sources:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -39,3 +40,7 @@ jobs:
         run: make row-counts
       - name: Source tests
         run: dbt test --select "source:*" --project-dir dbt --profiles-dir dbt
+      # RF-02 acceptance: every source has a stg_ model; build them and run their tests on the
+      # real month (fails on any test error; warnings are reported but do not fail).
+      - name: Staging models and tests
+        run: make staging

@@ -46,7 +46,8 @@ CLASSES - FIF;00.017.024/0001-53;;2026-09-01;1107741.39;44.636723400000;1214792.
 
 Source quirks (handled in staging, not in raw): `registro_fundo.csv` has one row per fund **and
 manager**, so `ID_Registro_Fundo` repeats (81,710 distinct CNPJs); a handful of
-`ID_Registro_Classe` values repeat as well.
+`ID_Registro_Classe` values repeat as well. Grain and deduplication of the staging models:
+[ADR 006](adr/006-staging-grain-and-deduplication.md).
 
 ## Key mapping after Resolution 175
 
