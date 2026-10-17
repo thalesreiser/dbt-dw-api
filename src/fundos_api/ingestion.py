@@ -24,7 +24,7 @@ import zipfile
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import duckdb
 
@@ -248,6 +248,18 @@ def extract_csv_utf8(zip_path: Path, member: str, dest: Path, encoding: str = CV
     return dest
 
 
+def local_member_name(member: str) -> str:
+    """File name used to extract a zip member into the work folder.
+
+    Only the last path component is kept, so a member such as ``../x.csv`` or ``/tmp/x.csv``
+    cannot write outside the folder (zip slip).
+    """
+    name = PurePosixPath(member.replace("\\", "/")).name
+    if name in ("", ".", "..") or ":" in name:
+        raise ValueError(f"unsafe zip member name {member!r}")
+    return name
+
+
 def single_csv_member(zip_path: Path) -> str:
     with zipfile.ZipFile(zip_path) as archive:
         members = [name for name in archive.namelist() if name.lower().endswith(".csv")]
@@ -421,7 +433,7 @@ def load_from_cvm(con: duckdb.DuckDBPyConnection, config: LoadConfig, loaded_at:
             url = informe_diario_url(competencia, config.base_url)
             zip_path = download(url, workdir / Path(url).name, config.timeout, config.retries)
             member = single_csv_member(zip_path)
-            csv_path = extract_csv_utf8(zip_path, member, workdir / member)
+            csv_path = extract_csv_utf8(zip_path, member, workdir / local_member_name(member))
             load_informe_diario_csv(con, csv_path, competencia, loaded_at, url)
             logger.info("loaded %s for competencia %s", INFORME_DIARIO, competencia)
             csv_path.unlink()
@@ -430,7 +442,7 @@ def load_from_cvm(con: duckdb.DuckDBPyConnection, config: LoadConfig, loaded_at:
         url = registro_url(config.base_url)
         zip_path = download(url, workdir / Path(url).name, config.timeout, config.retries)
         for member, table in REGISTRO_MEMBERS.items():
-            csv_path = extract_csv_utf8(zip_path, member, workdir / member)
+            csv_path = extract_csv_utf8(zip_path, member, workdir / local_member_name(member))
             load_cadastro_csv(con, table, csv_path, loaded_at, f"{url}#{member}")
             logger.info("loaded %s from %s", table, member)
 
