@@ -1,9 +1,74 @@
 version: 2
 
-# RF-01: sources (Parquet from P1 or a direct load of CVM open data)
+# RF-01: raw source tables loaded by scripts/direct_load.py, either straight from the CVM open
+# data (R-P3-01 fallback) or from the P1 Parquet. Layout and keys: docs/data-source.md, ADR 005.
 sources:
   - name: cvm
+    description: >
+      CVM (Brazilian Securities Commission) investment fund open data, loaded as-is (all
+      columns VARCHAR, original CVM column names) into the DuckDB `raw` schema. Typing and
+      renaming happen in the staging layer.
     schema: raw
+    loaded_at_field: _loaded_at
+    # The data is published monthly: a load older than ~1 month is stale, older than ~2 is an error.
+    freshness:
+      warn_after: {count: 35, period: day}
+      error_after: {count: 65, period: day}
     tables:
       - name: informe_diario
+        description: >
+          Daily report of funds and classes (inf_diario_fi_YYYYMM.zip). Grain: one row per
+          class/subclass (CNPJ_FUNDO_CLASSE, ID_SUBCLASSE) per day (DT_COMPTC).
+        columns:
+          - name: CNPJ_FUNDO_CLASSE
+            description: CNPJ of the fund class (or of the fund, if not adapted to Resolution 175), formatted 00.000.000/0000-00.
+            tests: [not_null]
+          - name: DT_COMPTC
+            description: Reference date of the report (YYYY-MM-DD).
+            tests: [not_null]
+          - name: competencia
+            description: Reference month (YYYY-MM) of the source file; reloads replace the whole month.
+            tests: [not_null]
+          - name: _loaded_at
+            description: Load timestamp (UTC) used by `dbt source freshness`.
+            tests: [not_null]
+        tests:
+          - dbt_utils.unique_combination_of_columns:
+              combination_of_columns: [CNPJ_FUNDO_CLASSE, ID_SUBCLASSE, DT_COMPTC]
+
       - name: cadastro_fundos
+        description: >
+          Fund registry after CVM Resolution 175 (registro_fundo.csv inside
+          registro_fundo_classe.zip). Full snapshot replaced on every load.
+        columns:
+          - name: ID_Registro_Fundo
+            description: >
+              CVM registry id of the fund; joins to cadastro_classes. Not unique in the source:
+              the file has one row per fund and manager (Gestor), deduplicated in staging.
+            tests: [not_null]
+          - name: CNPJ_Fundo
+            description: CNPJ of the fund, digits only (a CNPJ can have more than one registry id).
+            tests: [not_null]
+          - name: _loaded_at
+            tests: [not_null]
+
+      - name: cadastro_classes
+        description: >
+          Fund class registry after CVM Resolution 175 (registro_classe.csv inside
+          registro_fundo_classe.zip). The daily report key CNPJ_FUNDO_CLASSE (digits only)
+          maps to CNPJ_Classe, or to cadastro_fundos.CNPJ_Fundo for funds not yet adapted.
+        columns:
+          - name: ID_Registro_Classe
+            description: CVM registry id of the class (a handful of ids are repeated in the source; deduplicated in staging).
+            tests: [not_null]
+          - name: ID_Registro_Fundo
+            tests:
+              - not_null
+              - relationships:
+                  to: source('cvm', 'cadastro_fundos')
+                  field: ID_Registro_Fundo
+          - name: CNPJ_Classe
+            description: CNPJ of the class, digits only.
+            tests: [not_null]
+          - name: _loaded_at
+            tests: [not_null]

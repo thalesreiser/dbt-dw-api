@@ -1,6 +1,14 @@
 DBT_ARGS = --project-dir dbt --profiles-dir dbt
+PYTHON ?= python
+# Same DuckDB file for the loader and dbt (paths relative to the repository root).
+DUCKDB_PATH ?= data/warehouse.duckdb
+export DUCKDB_PATH
+# Reference month to load (YYYY-MM); empty = previous month. COMPETENCIAS = months to load.
+COMPETENCIA ?=
+COMPETENCIAS ?= 1
+LOAD_ARGS = --competencias $(COMPETENCIAS) $(if $(COMPETENCIA),--competencia $(COMPETENCIA),)
 
-.PHONY: install up down deps build docs api lint fmt test
+.PHONY: install up down deps load load-p1 freshness row-counts sources build docs api lint fmt test
 
 install:
 	pip install -e ".[dev,dbt]" && pre-commit install
@@ -14,6 +22,21 @@ down:
 deps:
 	dbt deps $(DBT_ARGS)
 
+load:  ## RF-01 / R-P3-01: direct load of the CVM open data into DuckDB
+	$(PYTHON) scripts/direct_load.py $(LOAD_ARGS)
+
+load-p1:  ## RF-01: load the P1 Parquet (P1_PATH=<base directory>)
+	$(PYTHON) scripts/direct_load.py --source p1-parquet --path $(P1_PATH) $(if $(COMPETENCIA),$(LOAD_ARGS),)
+
+freshness:  ## RF-01: freshness of the raw sources
+	dbt source freshness $(DBT_ARGS)
+
+row-counts:  ## RF-01: row count per source (fails if a source is empty)
+	dbt run-operation source_row_counts $(DBT_ARGS)
+
+sources: deps freshness row-counts  ## RF-01: freshness + row counts + source tests
+	dbt test --select "source:*" $(DBT_ARGS)
+
 build: deps  ## RNF-02: fails if any test fails
 	dbt build $(DBT_ARGS)
 
@@ -24,10 +47,10 @@ api:
 	uvicorn fundos_api.main:app --reload
 
 lint:
-	ruff check src tests && black --check src tests && mypy src
+	ruff check src tests scripts && black --check src tests scripts && mypy src scripts
 
 fmt:
-	ruff check --fix src tests && black src tests
+	ruff check --fix src tests scripts && black src tests scripts
 
 test:
 	pytest

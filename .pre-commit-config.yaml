@@ -21,7 +21,7 @@ repos:
     rev: v1.11.2
     hooks:
       - id: mypy
-        files: ^src/
+        files: ^(src|scripts)/
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.19.2
     hooks:
