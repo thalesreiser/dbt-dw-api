@@ -1,0 +1,262 @@
+version: 2
+
+# RF-02: one staging model per CVM source: renamed, typed and standardized following
+# docs/naming-conventions.md (RNF-05). Grain and deduplication: docs/adr/006-staging-grain-and-deduplication.md.
+
+models:
+  - name: stg_cvm__informe_diario
+    description: >
+      Daily report of funds and classes (source `cvm.informe_diario`), renamed, typed and
+      standardized. Grain: one row per class or subclass per day
+      (`cnpj_fundo_classe`, `id_subclasse`, `dt_competencia`); `id_subclasse` is null when the
+      report is at class (or fund) level. No rows are dropped. Naming: docs/naming-conventions.md.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          # GROUP BY treats nulls as one group, so a null id_subclasse is handled as a value.
+          combination_of_columns: [cnpj_fundo_classe, id_subclasse, dt_competencia]
+    columns:
+      - name: cnpj_fundo_classe
+        description: >
+          CNPJ of the class, or of the fund when it reports without a class (not adapted to
+          Resolution 175); 14 characters without punctuation. Joins to
+          `stg_cvm__cadastro_classes.cnpj_classe`, else to `stg_cvm__cadastro_fundos.cnpj_fundo`.
+        tests: [not_null, valid_cnpj]
+      - name: id_subclasse
+        description: CVM id of the subclass (15 characters); null for class-level reports.
+      - name: dt_competencia
+        description: Reference date of the report (source `DT_COMPTC`).
+        tests: [not_null]
+      - name: tp_fundo_classe
+        description: Type of the reporting entity (source `TP_FUNDO_CLASSE`), upper case without accents.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["CLASSES - FIF", "CLASSE FIF/FAPI", "FI"]
+              config:
+                severity: warn
+      - name: vl_total
+        description: Total value of the portfolio, in BRL (decimal 18,2).
+      - name: vl_quota
+        description: >
+          Share value (cota), in BRL, with the 12 decimal places CVM publishes (decimal 27,12).
+          A few hundred rows per month are negative in the source and are kept as reported.
+        tests: [not_null]
+      - name: vl_patrim_liq
+        description: Net asset value (patrimônio líquido), in BRL (decimal 18,2).
+        tests: [not_null]
+      - name: vl_captc_dia
+        description: Inflows (captação) of the day, in BRL (decimal 18,2).
+      - name: vl_resg_dia
+        description: Redemptions (resgates) of the day, in BRL (decimal 18,2).
+      - name: nr_cotst
+        description: Number of shareholders (cotistas).
+      - name: dt_mes_competencia
+        description: First day of the reference month of the source file (source `competencia`, YYYY-MM).
+        tests: [not_null]
+      - name: _source
+        description: Loader source (`cvm` or `p1-parquet`).
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["cvm", "p1-parquet"]
+      - name: _source_file
+        description: File the row was loaded from.
+      - name: _loaded_at
+        description: Load timestamp (UTC).
+        tests: [not_null]
+
+  - name: stg_cvm__cadastro_fundos
+    description: >
+      Fund registry after CVM Resolution 175 (source `cvm.cadastro_fundos`, registro_fundo.csv),
+      renamed, typed and standardized. Grain: one row per fund registry id
+      (`id_registro_fundo`). The source has one row per fund and manager; fund-level columns are
+      identical across those rows, and the manager columns keep the first manager by CPF/CNPJ
+      (ADR 006). A CNPJ can have more than one registry id. Naming: docs/naming-conventions.md.
+    columns:
+      - name: id_registro_fundo
+        description: CVM registry id of the fund; primary key.
+        tests: [not_null, unique]
+      - name: cnpj_fundo
+        description: CNPJ of the fund, 14 characters without punctuation (not unique across registry ids).
+        tests: [not_null, valid_cnpj]
+      - name: cd_cvm
+        description: CVM code of the fund.
+        tests: [not_null]
+      - name: nm_denominacao_social
+        description: Legal name of the fund (trimmed, whitespace collapsed).
+        tests: [not_null]
+      - name: tp_fundo
+        description: Fund type (e.g. FI, FIDC, FIF, FII, FIP), upper case without accents.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["FI", "FIDC", "FIF", "FACFIF", "FIP", "FII", "FITVM", "FMIA-CL", "FIAGRO",
+                       "FIIM", "FMIA", "FMP-FGTS", "FMIEE", "FUNCINE", "FAPI", "FMP-FGTS CL",
+                       "FICART", "FMAI", "FI-FGTS"]
+              config:
+                severity: warn
+      - name: sit_fundo
+        description: Registry status of the fund, upper case without accents.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["EM FUNCIONAMENTO NORMAL", "FASE PRE-OPERACIONAL", "EM LIQUIDACAO",
+                       "CANCELADO", "INCORPORACAO", "EM SITUACAO ESPECIAL", "EM ANALISE"]
+      - name: dt_registro
+        description: Registration date at CVM.
+      - name: dt_constituicao
+        description: Incorporation date of the fund.
+      - name: dt_cancelamento
+        description: Cancellation date (null while the fund is not cancelled).
+      - name: dt_inicio_situacao
+        description: Date the current status started.
+      - name: dt_adaptacao_rcvm175
+        description: Date the fund adapted to CVM Resolution 175 (null if not adapted).
+      - name: dt_inicio_exercicio_social
+        description: Start of the current fiscal year.
+      - name: dt_fim_exercicio_social
+        description: End of the current fiscal year.
+      - name: vl_patrim_liq
+        description: Net asset value reported in the registry, in BRL (decimal 18,2).
+      - name: dt_patrim_liq
+        description: Reference date of `vl_patrim_liq`.
+      - name: nm_diretor
+        description: Director responsible for the fund.
+      - name: cnpj_administrador
+        description: CNPJ of the administrator, 14 characters without punctuation.
+        tests: [valid_cnpj]
+      - name: nm_administrador
+        description: Name of the administrator.
+      - name: tp_pessoa_gestor
+        description: Kind of manager kept on this row, PF (natural person) or PJ (legal entity).
+        tests:
+          - accepted_values:
+              values: ["PF", "PJ"]
+      - name: cpf_cnpj_gestor
+        description: CPF or CNPJ of the manager kept on this row (first by CPF/CNPJ when the fund has several).
+        tests: [valid_cpf_cnpj]
+      - name: nm_gestor
+        description: Name of the manager kept on this row.
+      - name: nr_gestor
+        description: Number of distinct managers of the fund in the source (0 when none is listed).
+        tests: [not_null]
+      - name: _source
+        description: Loader source (`cvm` or `p1-parquet`).
+        tests: [not_null]
+      - name: _source_file
+        description: File the row was loaded from.
+      - name: _loaded_at
+        description: Load timestamp (UTC).
+        tests: [not_null]
+
+  - name: stg_cvm__cadastro_classes
+    description: >
+      Fund class registry after CVM Resolution 175 (source `cvm.cadastro_classes`,
+      registro_classe.csv), renamed, typed and standardized. Grain: one row per class registry id
+      (`id_registro_classe`); the few repeated ids are deduplicated deterministically (ADR 006).
+      A CNPJ can have more than one registry id. Naming: docs/naming-conventions.md.
+    columns:
+      - name: id_registro_classe
+        description: CVM registry id of the class; primary key.
+        tests: [not_null, unique]
+      - name: id_registro_fundo
+        description: Registry id of the fund the class belongs to.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_cvm__cadastro_fundos')
+              field: id_registro_fundo
+      - name: cnpj_classe
+        description: CNPJ of the class, 14 characters without punctuation; joins to the daily report.
+        tests: [not_null, valid_cnpj]
+      - name: cd_cvm
+        description: CVM code of the class.
+        tests: [not_null]
+      - name: nm_denominacao_social
+        description: Legal name of the class (trimmed, whitespace collapsed).
+        tests: [not_null]
+      - name: tp_classe
+        description: Class type, upper case without accents.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["CLASSES DE COTAS DE FUNDOS FIF", "CLASSES DE COTAS DE FUNDOS FIDC",
+                       "CLASSES DE COTAS DE FUNDOS FIP", "CLASSES DE COTAS DE FUNDOS FII",
+                       "CLASSES DE COTAS DE FUNDOS FIAGRO", "CLASSES DE COTAS DE FUNDOS FIIM",
+                       "CLASSES DE COTAS DE FUNDOS FIF (FAPI)", "CLASSES DE COTAS DE FUNDOS FUNCINE",
+                       "CLASSES DE COTAS DE FUNDOS FICART", "CLASSES DE COTAS DE FUNDOS FIP (FMIEE)"]
+              config:
+                severity: warn
+      - name: sit_classe
+        description: Registry status of the class, upper case without accents.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["EM FUNCIONAMENTO NORMAL", "FASE PRE-OPERACIONAL", "EM LIQUIDACAO",
+                       "CANCELADO", "INCORPORACAO", "EM SITUACAO ESPECIAL", "EM ANALISE"]
+      - name: dt_registro
+        description: Registration date at CVM.
+      - name: dt_constituicao
+        description: Incorporation date of the class.
+      - name: dt_inicio
+        description: Start date of the class operations.
+      - name: dt_inicio_situacao
+        description: Date the current status started.
+      - name: tp_classificacao
+        description: CVM classification (asset class), upper case without accents.
+        tests:
+          - accepted_values:
+              values: ["MULTIMERCADO", "RENDA FIXA", "ACOES", "CAMBIAL", "FMP-FGTS"]
+      - name: tp_classificacao_anbima
+        description: ANBIMA classification, upper case without accents.
+      - name: nm_indicador_desempenho
+        description: Benchmark of the class (e.g. DI de um dia, Ibovespa).
+      - name: tp_condominio
+        description: Open-ended (ABERTO) or closed-ended (FECHADO) class.
+        tests:
+          - accepted_values:
+              values: ["ABERTO", "FECHADO"]
+      - name: tp_publico_alvo
+        description: Target investors, upper case without accents.
+        tests:
+          - accepted_values:
+              values: ["PUBLICO GERAL", "QUALIFICADO", "PROFISSIONAL"]
+      - name: fl_classe_cotas
+        description: True when the class invests in shares of other funds (source `Classe_Cotas`).
+      - name: fl_exclusivo
+        description: True for an exclusive class (single investor).
+      - name: fl_tributacao_longo_prazo
+        description: True when the class pursues long-term taxation; null when not applicable (N/A).
+      - name: fl_entidade_investimento
+        description: True when the class is an investment entity.
+      - name: fl_aplicacao_100_exterior
+        description: True when the class may invest up to 100% abroad.
+      - name: fl_classe_esg
+        description: True for an ESG class.
+      - name: vl_patrim_liq
+        description: Net asset value reported in the registry, in BRL (decimal 18,2).
+      - name: dt_patrim_liq
+        description: Reference date of `vl_patrim_liq`.
+      - name: cpf_cnpj_auditor
+        description: CNPJ of the auditor (or CPF of an individual auditor).
+        tests: [valid_cpf_cnpj]
+      - name: nm_auditor
+        description: Name of the auditor.
+      - name: cnpj_custodiante
+        description: CNPJ of the custodian, 14 characters without punctuation.
+        tests: [valid_cnpj]
+      - name: nm_custodiante
+        description: Name of the custodian.
+      - name: cnpj_controlador
+        description: CNPJ of the controller, 14 characters without punctuation.
+        tests: [valid_cnpj]
+      - name: nm_controlador
+        description: Name of the controller.
+      - name: _source
+        description: Loader source (`cvm` or `p1-parquet`).
+        tests: [not_null]
+      - name: _source_file
+        description: File the row was loaded from.
+      - name: _loaded_at
+        description: Load timestamp (UTC).
+        tests: [not_null]
