@@ -1,6 +1,6 @@
 version: 2
 
-# RF-03 (3.2): intermediate models (ephemeral). Design: docs/dimensional-model.md.
+# RF-03 (3.2): intermediate models (ephemeral unless noted). Design: docs/dimensional-model.md.
 
 models:
   - name: int_fundo_classe__unificado
@@ -11,8 +11,9 @@ models:
       class CNPJ nor the CNPJ of a fund with classes (funds not adapted to Resolution 175); class
       columns are null. When a CNPJ has several registry ids, the non-cancelled one is kept,
       then the latest `dt_registro`, then the highest registry id. Registry status is kept
-      as-is (a `CANCELADO` fund that still reports keeps that status). Input of `dim_fundo` and,
-      from task 3.4, of its SCD2 snapshot.
+      as-is (a `CANCELADO` fund that still reports keeps that status). Materialized as a view in
+      schema `intermediate` (RF-04, 3.4) because it is the input of the SCD2 snapshot
+      `snp_cvm__fundo_classe`, which `dim_fundo` reads.
     tests:
       - dbt_utils.expression_is_true:
           expression: "(tp_registro = 'CLASSE') = (id_registro_classe is not null)"
