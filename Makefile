@@ -37,8 +37,8 @@ row-counts:  ## RF-01: row count per source (fails if a source is empty)
 sources: deps freshness row-counts  ## RF-01: freshness + row counts + source tests
 	dbt test --select "source:*" $(DBT_ARGS)
 
-staging: deps  ## RF-02: build the stg_ models and run their tests (and the source tests)
-	dbt build --select staging $(DBT_ARGS)
+staging: deps  ## RF-02: build the stg_ models and run the tests on them only (cautious: no mart tests)
+	dbt build --select staging --indirect-selection cautious $(DBT_ARGS)
 
 marts: deps  ## RF-03: build the seeds and the marts with everything upstream, and run their tests
 	dbt build --select +marts $(DBT_ARGS)
