@@ -47,7 +47,15 @@ jobs:
       # real month (fails on any test error; warnings are reported but do not fail).
       - name: Staging models and tests
         run: make staging
+      # RF-04 (3.4): SCD2 snapshot of the registry before the marts. History lives only for this
+      # run (the DuckDB file is discarded), so every CNPJ has one version here.
+      - name: Registry snapshot
+        run: make snapshot
       # RF-03 acceptance (3.2): build the holidays seed, the intermediate model and the
       # dimensions on the same real month, and run their tests (unique, non-null keys).
       - name: Marts models and tests
         run: make marts
+      # RF-04 acceptance (3.4): change one registry attribute on a copy of the warehouse,
+      # snapshot again and assert two versions with contiguous validity.
+      - name: SCD2 simulation
+        run: make scd2-sim
