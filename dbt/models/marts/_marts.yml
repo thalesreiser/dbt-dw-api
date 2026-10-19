@@ -154,3 +154,111 @@ models:
       - name: fl_dia_util
         description: "Business day: not a weekend and not a national holiday."
         tests: [not_null]
+
+  - name: fct_informe_diario
+    description: >
+      Daily report fact. Grain: one row per fund class (or subclass) per day
+      (`cnpj_fundo_classe`, `id_subclasse`, `sk_data`), the grain of `stg_cvm__informe_diario`.
+      Incremental (ADR 003): `delete+insert` by reference month (`unique_key =
+      dt_mes_competencia`); a run rebuilds every month whose load (`_loaded_at`) is new or
+      changed, so the month CVM republishes is replaced as a whole. `sk_fundo` is the
+      `dim_fundo` version of the CNPJ valid on the report date, else the unknown member.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [cnpj_fundo_classe, id_subclasse, sk_data]
+      - dbt_utils.expression_is_true:
+          expression: "dt_mes_competencia = date_trunc('month', sk_data)"
+    columns:
+      - name: sk_fundo
+        description: >
+          FK to `dim_fundo`: the version with the same `cnpj_fundo_classe` and `sk_data` in
+          [`dt_valido_de`, `dt_valido_ate`); the unknown member when there is none.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_fundo')
+              field: sk_fundo
+      - name: sk_data
+        description: FK to `dim_data`; the report date (`dt_competencia`).
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_data')
+              field: sk_data
+      - name: cnpj_fundo_classe
+        description: Degenerate natural key; reporting CNPJ (class CNPJ, else fund CNPJ).
+        tests: [not_null, valid_cnpj]
+      - name: id_subclasse
+        description: Degenerate dimension; subclass id, null when the report is at class level.
+      - name: vl_total
+        description: Total portfolio value (BRL); semi-additive (never sum across days).
+      - name: vl_quota
+        description: Share value (BRL); non-additive.
+      - name: vl_patrim_liq
+        description: Net assets (BRL); semi-additive (never sum across days).
+      - name: vl_captc_dia
+        description: Inflows of the day (BRL); additive.
+      - name: vl_resg_dia
+        description: Redemptions of the day (BRL); additive.
+      - name: vl_captc_liquida_dia
+        description: "Net inflows of the day (RN-01): `vl_captc_dia - vl_resg_dia`, a missing side as zero; additive."
+        tests: [not_null]
+      - name: nr_cotst
+        description: Number of shareholders; semi-additive (may count an investor more than once across classes).
+      - name: dt_mes_competencia
+        description: Reference month (first day); the unit the incremental run replaces.
+        tests: [not_null]
+      - name: _loaded_at
+        description: Load timestamp of the month in the raw layer; drives the incremental filter.
+        tests: [not_null]
+
+  - name: fct_captacao_mensal
+    description: >
+      Monthly net inflows fact (RN-01, ranking of RF-09). Grain: one row per fund class per
+      month (`cnpj_fundo_classe`, `sk_mes`); subclass rows are rolled up into their class. Built
+      from `fct_informe_diario` as a table. `sk_fundo` is the version valid on the last
+      reported day of the month.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [cnpj_fundo_classe, sk_mes]
+      - dbt_utils.expression_is_true:
+          expression: "vl_captc_liquida_mes = vl_captc_mes - vl_resg_mes"
+      - dbt_utils.expression_is_true:
+          expression: "dt_ultimo_informe >= sk_mes and dt_ultimo_informe <= last_day(sk_mes)"
+    columns:
+      - name: sk_fundo
+        description: FK to `dim_fundo`; the version valid on `dt_ultimo_informe` (unknown member when none).
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_fundo')
+              field: sk_fundo
+      - name: sk_mes
+        description: FK to `dim_data` (role month); first day of the reference month.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_data')
+              field: sk_data
+      - name: cnpj_fundo_classe
+        description: Degenerate natural key; reporting CNPJ.
+        tests: [not_null]
+      - name: vl_captc_mes
+        description: Inflows of the month (BRL), sum of the daily values; additive.
+        tests: [not_null]
+      - name: vl_resg_mes
+        description: Redemptions of the month (BRL), sum of the daily values; additive.
+        tests: [not_null]
+      - name: vl_captc_liquida_mes
+        description: "Net inflows of the month (RN-01): `vl_captc_mes - vl_resg_mes`; RF-09 ranks by it."
+        tests: [not_null]
+      - name: vl_patrim_liq_fim_mes
+        description: Net assets on the last reported day of the month (subclasses summed); semi-additive.
+      - name: nr_cotst_fim_mes
+        description: Shareholders on the last reported day of the month (subclasses summed); semi-additive.
+      - name: dt_ultimo_informe
+        description: Last reported day of the month.
+        tests: [not_null]
+      - name: nr_dias_informados
+        description: Number of reported days in the month.
+        tests: [not_null]
