@@ -1,0 +1,34 @@
+version: 2
+
+seeds:
+  - name: feriados_nacionais
+    description: >
+      Brazilian national holidays that close the financial market, 2000 to 2035 (RF-03, 3.2),
+      used by `dim_data.fl_dia_util`. Generated from the rules in law by
+      `scripts/generate_national_holidays.py` (not downloaded): fixed dates of Lei 662/1949
+      (as amended by Lei 10.607/2002), Lei 6.802/1980 and, from 2024, Lei 14.759/2023 (20 Nov);
+      Easter-based Carnival Monday and Tuesday, Good Friday and Corpus Christi, which are
+      non-business days in the national financial calendar (ANBIMA / B3). Limits: no state or
+      municipal holidays and no one-off closures. Grain: one row per holiday and date (two
+      holidays can share a date, e.g. 2000-04-21).
+    config:
+      column_types:
+        dt_feriado: date
+        nm_feriado: varchar
+        tp_feriado: varchar
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [dt_feriado, nm_feriado]
+    columns:
+      - name: dt_feriado
+        description: Date of the holiday.
+        tests: [not_null]
+      - name: nm_feriado
+        description: Name of the holiday (pt-BR, without accents).
+        tests: [not_null]
+      - name: tp_feriado
+        description: "`FIXO` (fixed date) or `MOVEL` (Easter-based)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["FIXO", "MOVEL"]
