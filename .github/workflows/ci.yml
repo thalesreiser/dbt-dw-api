@@ -47,3 +47,7 @@ jobs:
       # real month (fails on any test error; warnings are reported but do not fail).
       - name: Staging models and tests
         run: make staging
+      # RF-03 acceptance (3.2): build the holidays seed, the intermediate model and the
+      # dimensions on the same real month, and run their tests (unique, non-null keys).
+      - name: Marts models and tests
+        run: make marts
