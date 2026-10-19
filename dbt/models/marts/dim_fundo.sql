@@ -1,24 +1,46 @@
 -- RF-03 (3.2): fund/class dimension. Grain: one row per reporting CNPJ (cnpj_fundo_classe) and
--- version, plus the unknown member. Design: docs/dimensional-model.md.
+-- version (SCD2), plus the unknown member. Design: docs/dimensional-model.md.
 --
--- Until the SCD2 snapshot of task 3.4 there is a single (current) version per CNPJ. It already
--- follows the history rules of the design: the first version starts at 1900-01-01, so sk_fundo
--- = hash(cnpj_fundo_classe, dt_valido_de) stays the same when the snapshot takes over.
+-- RF-04 (3.4): SCD type 2, built from the snapshot snp_cvm__fundo_classe.
+-- * dt_valido_de = date of dbt_valid_from, except the first version of each CNPJ, which starts
+--   at 1900-01-01 (no registry history before the first snapshot), so facts older than the
+--   first snapshot still resolve and sk_fundo of the first version is the one of task 3.2.
+-- * dt_valido_ate = date of dbt_valid_to (exclusive), null for the current version. Validity
+--   is the half-open interval [dt_valido_de, dt_valido_ate).
+-- * Several versions opened on the same day collapse into the last one of that day, so
+--   (cnpj_fundo_classe, dt_valido_de) and sk_fundo stay unique.
 
-with unificado as (
+with registro_snapshot as (
 
-    select * from {{ ref('int_fundo_classe__unificado') }}
+    select * from {{ ref('snp_cvm__fundo_classe') }}
+
+),
+
+-- Last version of each CNPJ per day; its dbt_valid_to is the start of the next kept version.
+versoes_do_dia as (
+
+    select *
+    from registro_snapshot
+    qualify row_number() over (
+        partition by cnpj_fundo_classe, cast(dbt_valid_from as date)
+        order by dbt_valid_from desc
+    ) = 1
 
 ),
 
 versoes as (
 
     select
-        *,
-        cast('1900-01-01' as date)          as dt_valido_de,
-        cast(null as date)                  as dt_valido_ate,
-        true                                as fl_versao_atual
-    from unificado
+        * exclude (dbt_scd_id, dbt_updated_at, dbt_valid_from, dbt_valid_to),
+        case
+            when row_number() over (
+                partition by cnpj_fundo_classe order by dbt_valid_from
+            ) = 1 then cast('1900-01-01' as date)
+            else cast(dbt_valid_from as date)
+        end                                 as dt_valido_de,
+        cast(dbt_valid_to as date)          as dt_valido_ate,
+        dbt_valid_to is null                as fl_versao_atual
+    from versoes_do_dia
 
 ),
 

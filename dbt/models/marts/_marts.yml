@@ -10,15 +10,20 @@ models:
       the daily report) and version, at class grain with the fund attributes denormalized, plus
       fund-only rows (funds not adapted to Resolution 175) and one unknown member
       (`tp_registro = 'DESCONHECIDO'`, `cnpj_fundo_classe = '00000000000000'`) for facts whose
-      CNPJ does not resolve. Until the SCD2 snapshot of task 3.4 every CNPJ has a single,
-      current version valid from 1900-01-01. Registry status is shown as-is: a fund that is
-      `CANCELADO` in the registry but still reports keeps that status. Built from
-      `int_fundo_classe__unificado`.
+      CNPJ does not resolve. SCD type 2 (RF-04, 3.4), built from the snapshot
+      `snp_cvm__fundo_classe`: each version is valid on the half-open interval
+      [`dt_valido_de`, `dt_valido_ate`), and a fact with report date `dt` resolves to the
+      version where `dt >= dt_valido_de and (dt_valido_ate is null or dt < dt_valido_ate)`.
+      The first version of every CNPJ starts at 1900-01-01; versions of one CNPJ are contiguous
+      and never overlap, and exactly one is current. Registry status is shown as-is: a fund that
+      is `CANCELADO` in the registry but still reports keeps that status.
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: [cnpj_fundo_classe, dt_valido_de]
       - dbt_utils.expression_is_true:
           expression: "fl_versao_atual = (dt_valido_ate is null)"
+      - dbt_utils.expression_is_true:
+          expression: "dt_valido_ate is null or dt_valido_ate > dt_valido_de"
       - dbt_utils.expression_is_true:
           expression: "(tp_registro = 'CLASSE') = (id_registro_classe is not null)"
     columns:
@@ -87,13 +92,17 @@ models:
         description: Registration date at CVM of the kept registry entry (class, else fund).
       - name: dt_valido_de
         description: >
-          Start of the version (inclusive). The first version of every CNPJ starts at
-          1900-01-01 (no registry history before the first snapshot).
+          Start of the version (inclusive): date of the snapshot's `dbt_valid_from`. The first
+          version of every CNPJ starts at 1900-01-01 (no registry history before the first
+          snapshot), so older facts resolve to the oldest known version.
         tests: [not_null]
       - name: dt_valido_ate
-        description: End of the version (exclusive); null for the current version.
+        description: >
+          End of the version (exclusive): date of the snapshot's `dbt_valid_to`, equal to the
+          `dt_valido_de` of the next version; null for the current version. Validity is
+          [`dt_valido_de`, `dt_valido_ate`).
       - name: fl_versao_atual
-        description: True for the current version of the CNPJ.
+        description: True for the current version of the CNPJ (`dbt_valid_to` is null); exactly one per CNPJ.
         tests: [not_null]
 
   - name: dim_data

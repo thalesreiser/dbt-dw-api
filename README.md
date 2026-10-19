@@ -60,12 +60,13 @@ One view per source, renamed, typed and standardized; documented and tested in
 
 Documented and tested in [`_int__models.yml`](dbt/models/intermediate/_int__models.yml) and
 [`_marts.yml`](dbt/models/marts/_marts.yml); `make marts` builds them with everything upstream
-(`dbt build --select +marts`). The SCD2 history comes in task 3.4.
+(`dbt build --select +marts`, which also runs the registry snapshot).
 
 | Model | Materialization | Grain | Rows (2026-09 / registry of 2026-10-17) |
 |---|---|---|---|
-| `int_fundo_classe__unificado` | ephemeral | 1 row per reporting CNPJ (`cnpj_fundo_classe`): class rows with their fund's attributes, plus fund-only rows | 81,767 (36,857 classes + 44,910 fund-only) |
-| `dim_fundo` | table | 1 row per reporting CNPJ per version (one current version until 3.4) + unknown member; key `sk_fundo` | 81,768 |
+| `int_fundo_classe__unificado` | view (input of the snapshot) | 1 row per reporting CNPJ (`cnpj_fundo_classe`): class rows with their fund's attributes, plus fund-only rows | 81,767 (36,857 classes + 44,910 fund-only) |
+| snapshot `snp_cvm__fundo_classe` | snapshot (`check`) | 1 row per reporting CNPJ per version (SCD2) | 81,767 on the first run |
+| `dim_fundo` | table | 1 row per reporting CNPJ per version (SCD2) + unknown member; key `sk_fundo` | 81,768 on the first run |
 | `dim_data` | table | 1 row per calendar day, first month loaded to the end of the current year; key `sk_data` | 122 (2026-09-01 to 2026-12-31, 83 business days) |
 | `fct_informe_diario` | incremental (`delete+insert` by month, [ADR 003](docs/adr/003-incremental-vs-table.md)) | 1 row per fund class (or subclass) per day; FKs `sk_fundo` (version valid on the date, else unknown member), `sk_data` | 538,169 (2026-08) + 538,099 (2026-09), 0 on the unknown member |
 | `fct_captacao_mensal` | table | 1 row per fund class per month; net inflows (RN-01), end-of-month net assets; FKs `sk_fundo`, `sk_mes` | 25,578 per month (2026-08, 2026-09) |
@@ -136,6 +137,26 @@ Table and column names follow the source domain in Portuguese (`fundo` = fund, `
 ### History with SCD type 2
 
 When a fund changes its name, class or status in the registry, `dbt snapshot` does **not** overwrite the record: it closes the old version (`dt_valido_ate`) and opens a new one. A 2024 fact therefore keeps pointing to the fund as it was in 2024.
+
+Implemented in task 3.4 (RF-04, [ADR 007](docs/adr/007-registry-snapshot-source-and-hard-deletes.md)):
+the snapshot `snp_cvm__fundo_classe` (schema `snapshots`, `check` strategy on every registry
+attribute, unique key `cnpj_fundo_classe`, hard deletes not invalidated) feeds `dim_fundo`.
+Each version is valid on [`dt_valido_de`, `dt_valido_ate`); the first one starts at 1900-01-01
+and same-day changes collapse into the last one. History accumulates only where the DuckDB file
+persists: run `make snapshot` (or `make marts`) after each `make load`; in CI the file lives for
+one run, so the mechanism is proven by a simulation instead:
+
+```bash
+make snapshot   # dbt build --select +snp_cvm__fundo_classe: registry view + snapshot + tests
+make scd2-sim   # on a temporary copy of the warehouse: snapshot, change one class name,
+                # snapshot again, rebuild dim_fundo and assert the two versions below
+```
+
+```text
+nm_denominacao_social                         | dt_valido_de | dt_valido_ate | fl_versao_atual
+FIF - CLASSE ... EXPONENCIAL - RESP LIMITADA  | 1900-01-01   | 2026-10-19    | False
+FIF - CLASSE ... RESP LIMITADA [SCD2 TEST]    | 2026-10-19   | None          | True
+```
 
 ## API
 
@@ -263,7 +284,7 @@ For development: `make install`, `make lint`, `make test`, `make docs` (dbt docu
 | [Data source](docs/data-source.md) | CVM files, layouts, encoding and key mapping (RF-01) |
 | [Naming conventions](docs/naming-conventions.md) | Layers, model names, column prefixes and types (RNF-05) |
 | [Dimensional model](docs/dimensional-model.md) | Star schema, grain of each fact, surrogate keys, class-or-fund resolution (RF-03) |
-| [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175, staging grain and deduplication |
+| [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175, staging grain and deduplication, registry snapshot |
 
 ## Related projects
 

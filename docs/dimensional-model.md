@@ -210,15 +210,22 @@ class rows) and `dt_registro` (of the kept registry entry). Cancelled funds that
 (233 in 2026-09) keep `sit_fundo_classe = 'CANCELADO'`; whether `GET /v1/fundos` (RF-07) lists
 them under a status filter, or flags them, is decided with the API.
 
-**History (SCD type 2, task 3.4).** `int_fundo_classe__unificado` is snapshotted with
-`dbt snapshot` (`unique_key = cnpj_fundo_classe`, `check` strategy on the tracked attributes:
-names, status, types, administrator, manager). `dim_fundo` reads the snapshot and exposes
+**History (SCD type 2, implemented in task 3.4, [ADR 007](adr/007-registry-snapshot-source-and-hard-deletes.md)).**
+`int_fundo_classe__unificado` (now a view, schema `intermediate`) is snapshotted by
+`snp_cvm__fundo_classe` (schema `snapshots`; `unique_key = cnpj_fundo_classe`, `check`
+strategy on every attribute: names, registry ids, status, types, classifications,
+administrator, manager, registration date; `invalidate_hard_deletes = false`, so a CNPJ that
+leaves the registry keeps its last version open). `dim_fundo` reads the snapshot and exposes
 `dt_valido_de` / `dt_valido_ate` (dates of `dbt_valid_from` / `dbt_valid_to`, null for the
 current version) and `fl_versao_atual`. The registry has no history before the first snapshot,
 so the **first version of each CNPJ starts at 1900-01-01**: facts older than the snapshot point
 to the oldest known version instead of becoming orphans. This is a documented approximation, not
 true as-of data. If the registry changes more than once on a day, the last change of the day
-wins.
+wins. Versions are half-open intervals [`dt_valido_de`, `dt_valido_ate`): the end of one is the
+start of the next, and facts resolve with `dt >= dt_valido_de and (dt_valido_ate is null or
+dt < dt_valido_ate)`. Tested: (natural key, `dt_valido_de`) unique, natural key unique among
+current rows, exactly one current version per CNPJ, contiguous versions without overlaps. History
+accumulates only where the DuckDB file persists; CI proves it with `make scd2-sim`.
 
 ### `dim_data`
 
@@ -271,6 +278,6 @@ The facts have no surrogate key of their own. Their natural grain is enforced wi
 
 | Task | Models | Materialization |
 |---|---|---|
-| 3.2 (done) | `dim_data` + seed `feriados_nacionais`; `int_fundo_classe__unificado`; `dim_fundo` (first without history) | table / ephemeral / table |
+| 3.2 (done) | `dim_data` + seed `feriados_nacionais`; `int_fundo_classe__unificado`; `dim_fundo` (first without history) | table / ephemeral (view from 3.4) / table |
 | 3.3 (done) | `fct_informe_diario`, `fct_captacao_mensal` | incremental per [ADR 003](adr/003-incremental-vs-table.md) / table |
-| 3.4 | `snp_cvm__fundo_classe` and `dim_fundo` on top of it (SCD2) | snapshot / table |
+| 3.4 (done) | `snp_cvm__fundo_classe` and `dim_fundo` on top of it (SCD2) | snapshot / table |
