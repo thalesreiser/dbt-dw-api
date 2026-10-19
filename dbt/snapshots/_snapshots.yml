@@ -1,0 +1,27 @@
+version: 2
+
+# RF-04 (3.4): SCD2 snapshot of the unified registry. Design: docs/dimensional-model.md;
+# ADR 007 (snapshot source and hard deletes).
+
+snapshots:
+  - name: snp_cvm__fundo_classe
+    description: >
+      SCD type 2 history of `int_fundo_classe__unificado`. Grain: one row per reporting CNPJ
+      (`cnpj_fundo_classe`) and version. `check` strategy on the tracked attributes (names,
+      registry ids, status, types, classifications, administrator, manager, registration date);
+      `invalidate_hard_deletes = false`, so a CNPJ that leaves the registry keeps its last
+      version open. dbt adds `dbt_scd_id`, `dbt_updated_at`, `dbt_valid_from` and
+      `dbt_valid_to` (null for the current version). History accumulates only where the DuckDB
+      file persists (in CI it lives for one run). Input of `dim_fundo`.
+    columns:
+      - name: dbt_scd_id
+        description: Unique id of the version (dbt).
+        tests: [not_null, unique]
+      - name: cnpj_fundo_classe
+        description: Natural key (reporting CNPJ).
+        tests: [not_null]
+      - name: dbt_valid_from
+        description: Timestamp of the snapshot run that opened the version.
+        tests: [not_null]
+      - name: dbt_valid_to
+        description: Timestamp of the snapshot run that closed the version; null if current.

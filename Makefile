@@ -8,7 +8,7 @@ COMPETENCIA ?=
 COMPETENCIAS ?= 1
 LOAD_ARGS = --competencias $(COMPETENCIAS) $(if $(COMPETENCIA),--competencia $(COMPETENCIA),)
 
-.PHONY: install up down deps load load-p1 freshness row-counts sources staging marts build docs api lint fmt test
+.PHONY: install up down deps load load-p1 freshness row-counts sources staging snapshot scd2-sim marts build docs api lint fmt test
 
 install:
 	pip install -e ".[dev,dbt]" && pre-commit install
@@ -38,7 +38,13 @@ sources: deps freshness row-counts  ## RF-01: freshness + row counts + source te
 	dbt test --select "source:*" $(DBT_ARGS)
 
 staging: deps  ## RF-02: build the stg_ models and run their tests (and the source tests)
-	dbt build --select staging $(DBT_ARGS)
+	dbt build --select staging --indirect-selection cautious $(DBT_ARGS)
+
+snapshot: deps  ## RF-04: SCD2 snapshot of the unified registry (with the models upstream)
+	dbt build --select +snp_cvm__fundo_classe $(DBT_ARGS)
+
+scd2-sim:  ## RF-04: simulate a registry change on a copy of the warehouse; prove 2 versions
+	$(PYTHON) scripts/simulate_scd2_change.py
 
 marts: deps  ## RF-03: build the seeds and the marts with everything upstream, and run their tests
 	dbt build --select +marts $(DBT_ARGS)

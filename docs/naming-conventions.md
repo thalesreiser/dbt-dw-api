@@ -11,10 +11,10 @@ while code, comments and documentation are in English.
 |---|---|---|---|---|---|
 | Sources | `dbt/models/staging/_sources.yml` | `raw` | loaded by `scripts/direct_load.py` | CVM table name | `raw.informe_diario` |
 | Staging | `dbt/models/staging/` | `staging` | view | `stg_<source>__<table>` | `stg_cvm__informe_diario` |
-| Intermediate | `dbt/models/intermediate/` | (none) | ephemeral | `int_<entity>__<transformation>` | `int_fundo_classe__unificado` |
+| Intermediate | `dbt/models/intermediate/` | (none); `intermediate` when a view | ephemeral (view when a snapshot reads it) | `int_<entity>__<transformation>` | `int_fundo_classe__unificado` |
 | Marts | `dbt/models/marts/` | `marts` | table / incremental | `dim_<entity>`, `fct_<process>` | `dim_fundo`, `fct_informe_diario` |
 | Seeds | `dbt/seeds/` | `seeds` | seed (CSV) | `<entity in Portuguese, plural>` | `feriados_nacionais` |
-| Snapshots (planned) | `dbt/snapshots/` | to be set in RF-04 | snapshot (SCD2) | `snp_<source>__<table>` | `snp_cvm__cadastro_classes` |
+| Snapshots | `dbt/snapshots/` | `snapshots` | snapshot (SCD2) | `snp_<source>__<entity>` | `snp_cvm__fundo_classe` |
 
 - **Staging** is the only layer that reads `source()`: one model per source table, no joins, no
   business rules. It renames, casts, standardizes and, where the source repeats a key,

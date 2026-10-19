@@ -8,6 +8,9 @@
 -- * One registry entry per CNPJ: when a CNPJ has several registry ids, keep the non-cancelled
 --   one, then the latest dt_registro, then the highest registry id.
 -- Registry status is kept as-is: a CANCELADO fund that still reports keeps its status.
+-- RF-04 (3.4): a view (not ephemeral) because the snapshot snp_cvm__fundo_classe selects from it.
+
+{{ config(materialized='view', schema='intermediate') }}
 
 with classes as (
 
