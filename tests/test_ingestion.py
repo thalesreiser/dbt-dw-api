@@ -114,3 +114,23 @@ def test_download_retries_then_fails(monkeypatch: pytest.MonkeyPatch, tmp_path: 
         ing.download("http://x/y.zip", tmp_path / "y.zip", retries=3, sleep=sleeps.append)
     assert len(calls) == 3
     assert sleeps == [1.0, 2.0]
+
+
+@pytest.mark.parametrize(
+    ("member", "expected"),
+    [
+        ("inf_diario_fi_202609.csv", "inf_diario_fi_202609.csv"),
+        ("dados/registro_fundo.csv", "registro_fundo.csv"),
+        ("../../evil.csv", "evil.csv"),
+        ("/tmp/evil.csv", "evil.csv"),
+        ("..\..\evil.csv", "evil.csv"),
+    ],
+)
+def test_local_member_name_keeps_only_the_file_name(member: str, expected: str) -> None:
+    assert ing.local_member_name(member) == expected
+
+
+@pytest.mark.parametrize("member", ["", "..", "dados/..", "C:evil.csv"])
+def test_local_member_name_rejects_unsafe_names(member: str) -> None:
+    with pytest.raises(ValueError, match="unsafe"):
+        ing.local_member_name(member)

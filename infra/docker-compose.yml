@@ -5,5 +5,6 @@ services:
       context: ..
       dockerfile: infra/Dockerfile
     env_file: ../.env
-    ports: ["8000:8000"]
+    # Local only (RNF-03): the API is not meant to be reachable from the network.
+    ports: ["127.0.0.1:8000:8000"]
     volumes: ["../data:/app/data:ro"]
