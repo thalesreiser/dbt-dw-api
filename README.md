@@ -60,7 +60,7 @@ One view per source, renamed, typed and standardized; documented and tested in
 
 Documented and tested in [`_int__models.yml`](dbt/models/intermediate/_int__models.yml) and
 [`_marts.yml`](dbt/models/marts/_marts.yml); `make marts` builds them with everything upstream
-(`dbt build --select +marts`, which also runs the registry snapshot). Facts come in task 3.3.
+(`dbt build --select +marts`, which also runs the registry snapshot).
 
 | Model | Materialization | Grain | Rows (2026-09 / registry of 2026-10-17) |
 |---|---|---|---|
@@ -68,6 +68,8 @@ Documented and tested in [`_int__models.yml`](dbt/models/intermediate/_int__mode
 | snapshot `snp_cvm__fundo_classe` | snapshot (`check`) | 1 row per reporting CNPJ per version (SCD2) | 81,767 on the first run |
 | `dim_fundo` | table | 1 row per reporting CNPJ per version (SCD2) + unknown member; key `sk_fundo` | 81,768 on the first run |
 | `dim_data` | table | 1 row per calendar day, first month loaded to the end of the current year; key `sk_data` | 122 (2026-09-01 to 2026-12-31, 83 business days) |
+| `fct_informe_diario` | incremental (`delete+insert` by month, [ADR 003](docs/adr/003-incremental-vs-table.md)) | 1 row per fund class (or subclass) per day; FKs `sk_fundo` (version valid on the date, else unknown member), `sk_data` | 538,169 (2026-08) + 538,099 (2026-09), 0 on the unknown member |
+| `fct_captacao_mensal` | table | 1 row per fund class per month; net inflows (RN-01), end-of-month net assets; FKs `sk_fundo`, `sk_mes` | 25,578 per month (2026-08, 2026-09) |
 | seed `feriados_nacionais` | seed | 1 row per national holiday and date, 2000-2035 | 444 |
 
 `fl_dia_util` in `dim_data` excludes weekends and the national holidays of the seed, which is

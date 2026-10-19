@@ -118,6 +118,12 @@ above are fixed by this design.
 
 - **Foreign keys:** `sk_fundo` (the `dim_fundo` version valid on `dt_competencia`), `sk_data =
   dt_competencia`.
+- **Implemented in 3.3** as an incremental model (`delete+insert` by `dt_mes_competencia`, see
+  [ADR 003](adr/003-incremental-vs-table.md)); it also carries `dt_mes_competencia` and
+  `_loaded_at`, which drive the reprocessing of reloaded months. `vl_captc_liquida_dia` counts a
+  missing inflow or redemption as zero. 2026-08: 538,169 rows; 2026-09: 538,099; 0 rows on the
+  unknown member. The version lookup uses `coalesce(dt_valido_ate, '9999-12-31')` as the
+  exclusive upper bound, so it works unchanged with several versions per CNPJ (3.4).
 
 ### `fct_captacao_mensal`
 
@@ -135,6 +141,10 @@ above are fixed by this design.
 
 - **Foreign keys:** `sk_fundo` (the version valid on `dt_ultimo_informe`), `sk_mes` = first day
   of the month, a role of `dim_data`.
+- **Implemented in 3.3** as a table: `sk_fundo` is taken from the daily row of the last reported
+  day; inflows and redemptions are summed with a missing value as zero; the end-of-month values
+  are those of the last reported day even when null. 25,578 rows in 2026-08 and in 2026-09; the
+  singular test `assert_fct_captacao_mensal_reconciles_daily` checks it against the daily fact.
 
 ## Dimensions
 
@@ -269,5 +279,5 @@ The facts have no surrogate key of their own. Their natural grain is enforced wi
 | Task | Models | Materialization |
 |---|---|---|
 | 3.2 (done) | `dim_data` + seed `feriados_nacionais`; `int_fundo_classe__unificado`; `dim_fundo` (first without history) | table / ephemeral (view from 3.4) / table |
-| 3.3 | `fct_informe_diario`, `fct_captacao_mensal` | table first; incremental per [ADR 003](adr/003-incremental-vs-table.md) |
+| 3.3 (done) | `fct_informe_diario`, `fct_captacao_mensal` | incremental per [ADR 003](adr/003-incremental-vs-table.md) / table |
 | 3.4 (done) | `snp_cvm__fundo_classe` and `dim_fundo` on top of it (SCD2) | snapshot / table |
