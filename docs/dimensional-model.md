@@ -190,6 +190,16 @@ above are fixed by this design.
 
 Expected size: 81,768 current rows (36,857 classes + 44,910 fund-only + 1 unknown).
 
+**Implemented in 3.2** (`int_fundo_classe__unificado` + `dim_fundo`), with the expected 81,768
+rows. "Whose fund has no class" is evaluated per CNPJ: a fund CNPJ is a fund-only row when no
+registry id with that CNPJ has a class (44,910; per registry id it would be 44,912). Until 3.4
+every CNPJ has one version, already following the history rules (`dt_valido_de = 1900-01-01`,
+`dt_valido_ate` null, `fl_versao_atual` true), so `sk_fundo` will not change when the snapshot
+takes over. Two columns were added to the diagram's list: `sit_fundo` (fund status, also on
+class rows) and `dt_registro` (of the kept registry entry). Cancelled funds that still report
+(233 in 2026-09) keep `sit_fundo_classe = 'CANCELADO'`; whether `GET /v1/fundos` (RF-07) lists
+them under a status filter, or flags them, is decided with the API.
+
 **History (SCD type 2, task 3.4).** `int_fundo_classe__unificado` is snapshotted with
 `dbt snapshot` (`unique_key = cnpj_fundo_classe`, `check` strategy on the tracked attributes:
 names, status, types, administrator, manager). `dim_fundo` reads the snapshot and exposes
@@ -208,6 +218,22 @@ wins.
   `fl_dia_util` (weekday that is not a national holiday; holidays from a seed, task 3.2).
 - **Role-playing:** `fct_captacao_mensal.sk_mes` points to the first day of the month in the same
   dimension, so no separate month dimension is needed.
+
+**Implemented in 3.2.** The spine starts at a fixed lower bound (2000-01-01, the first year of
+the holidays seed) and is cut at the first `dt_mes_competencia` loaded; it ends on 31 December
+of the current year (2026-09 load: 122 days, 83 business days). Besides the attributes above it
+carries `sk_mes` (= `dt_inicio_mes`, the key the monthly fact will use), `fl_fim_de_semana`,
+`fl_feriado` and `nm_feriado`; `nr_dia_semana` is the ISO weekday (1 = Monday).
+
+**Holidays.** The seed `feriados_nacionais` (2000-2035, 444 rows) is generated from the rules in
+law by `scripts/generate_national_holidays.py`, not downloaded: the fixed national holidays
+(Lei 662/1949 as amended by Lei 10.607/2002, Lei 6.802/1980 and, from 2024, Lei 14.759/2023 for
+20 November) and the Easter-based Carnival Monday and Tuesday, Good Friday and Corpus Christi,
+which are not federal holidays by law but are non-business days in the national financial
+calendar (ANBIMA / B3). Limits: no state or municipal holidays, no one-off closures; the test
+`assert_feriados_cover_dim_data_years` fails when `dim_data` reaches a year the seed does not
+cover. Cross-check on 2026-09: the daily report has rows on 22 distinct days, the 21 business
+days plus 7 September (2 rows), a holiday on which a couple of classes still reported.
 
 ## Surrogate keys
 
@@ -235,6 +261,6 @@ The facts have no surrogate key of their own. Their natural grain is enforced wi
 
 | Task | Models | Materialization |
 |---|---|---|
-| 3.2 | `dim_data`; `int_fundo_classe__unificado`; `dim_fundo` (first without history) | table / ephemeral / table |
+| 3.2 (done) | `dim_data` + seed `feriados_nacionais`; `int_fundo_classe__unificado`; `dim_fundo` (first without history) | table / ephemeral / table |
 | 3.3 | `fct_informe_diario`, `fct_captacao_mensal` | table first; incremental per [ADR 003](adr/003-incremental-vs-table.md) |
 | 3.4 | `snp_cvm__fundo_classe` and `dim_fundo` on top of it (SCD2) | snapshot / table |

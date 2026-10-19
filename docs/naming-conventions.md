@@ -11,14 +11,15 @@ while code, comments and documentation are in English.
 |---|---|---|---|---|---|
 | Sources | `dbt/models/staging/_sources.yml` | `raw` | loaded by `scripts/direct_load.py` | CVM table name | `raw.informe_diario` |
 | Staging | `dbt/models/staging/` | `staging` | view | `stg_<source>__<table>` | `stg_cvm__informe_diario` |
-| Intermediate (planned) | `dbt/models/intermediate/` | (none) | ephemeral | `int_<entity>__<transformation>` | `int_fundo_classe__unificado` |
-| Marts (planned) | `dbt/models/marts/` | `marts` | table / incremental | `dim_<entity>`, `fct_<process>` | `dim_fundo`, `fct_informe_diario` |
+| Intermediate | `dbt/models/intermediate/` | (none) | ephemeral | `int_<entity>__<transformation>` | `int_fundo_classe__unificado` |
+| Marts | `dbt/models/marts/` | `marts` | table / incremental | `dim_<entity>`, `fct_<process>` | `dim_fundo`, `fct_informe_diario` |
+| Seeds | `dbt/seeds/` | `seeds` | seed (CSV) | `<entity in Portuguese, plural>` | `feriados_nacionais` |
 | Snapshots (planned) | `dbt/snapshots/` | to be set in RF-04 | snapshot (SCD2) | `snp_<source>__<table>` | `snp_cvm__cadastro_classes` |
 
 - **Staging** is the only layer that reads `source()`: one model per source table, no joins, no
   business rules. It renames, casts, standardizes and, where the source repeats a key,
   deduplicates deterministically to the documented grain ([ADR 006](adr/006-staging-grain-and-deduplication.md)).
-- Every model has a YAML entry next to it (`_<source>__models.yml` in staging, `_marts.yml` in
+- Every model has a YAML entry next to it (`_<source>__models.yml` in staging, `_int__models.yml` in intermediate, `_marts.yml` in
   marts) describing the model, its **grain**, and every column.
 - Singular tests live in `dbt/tests/<layer>/` and are named `assert_<what_must_hold>.sql`;
   generic tests live in `dbt/tests/generic/`.
