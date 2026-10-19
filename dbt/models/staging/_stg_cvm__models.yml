@@ -14,6 +14,9 @@ models:
       - dbt_utils.unique_combination_of_columns:
           # GROUP BY treats nulls as one group, so a null id_subclasse is handled as a value.
           combination_of_columns: [cnpj_fundo_classe, id_subclasse, dt_competencia]
+      # RF-05 (2.3): the report date falls in the reference month of the file it came from.
+      - dbt_utils.expression_is_true:
+          expression: "date_trunc('month', dt_competencia) = dt_mes_competencia"
     columns:
       - name: cnpj_fundo_classe
         description: >
@@ -23,9 +26,15 @@ models:
         tests: [not_null, valid_cnpj]
       - name: id_subclasse
         description: CVM id of the subclass (15 characters); null for class-level reports.
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "is null or regexp_full_match(id_subclasse, '[0-9A-Z]{15}')"
       - name: dt_competencia
         description: Reference date of the report (source `DT_COMPTC`).
-        tests: [not_null]
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "<= cast(_loaded_at as date)"
       - name: tp_fundo_classe
         description: Type of the reporting entity (source `TP_FUNDO_CLASSE`), upper case without accents.
         tests:
@@ -35,7 +44,13 @@ models:
               config:
                 severity: warn
       - name: vl_total
-        description: Total value of the portfolio, in BRL (decimal 18,2).
+        description: >
+          Total value of the portfolio, in BRL (decimal 18,2). A few hundred rows per month are
+          negative in the source and are kept as reported.
+        tests:
+          - not_null:
+              config:
+                severity: warn
       - name: vl_quota
         description: >
           Share value (cota), in BRL, with the 12 decimal places CVM publishes (decimal 27,12).
@@ -45,11 +60,19 @@ models:
         description: Net asset value (patrimônio líquido), in BRL (decimal 18,2).
         tests: [not_null]
       - name: vl_captc_dia
-        description: Inflows (captação) of the day, in BRL (decimal 18,2).
+        description: Inflows (captação) of the day, in BRL (decimal 18,2); never negative.
+        tests: &non_negative
+          - not_null:
+              config:
+                severity: warn
+          - dbt_utils.accepted_range:
+              min_value: 0
       - name: vl_resg_dia
-        description: Redemptions (resgates) of the day, in BRL (decimal 18,2).
+        description: Redemptions (resgates) of the day, in BRL (decimal 18,2); never negative.
+        tests: *non_negative
       - name: nr_cotst
-        description: Number of shareholders (cotistas).
+        description: Number of shareholders (cotistas); never negative.
+        tests: *non_negative
       - name: dt_mes_competencia
         description: First day of the reference month of the source file (source `competencia`, YYYY-MM).
         tests: [not_null]
@@ -61,6 +84,7 @@ models:
               values: ["cvm", "p1-parquet"]
       - name: _source_file
         description: File the row was loaded from.
+        tests: [not_null]
       - name: _loaded_at
         description: Load timestamp (UTC).
         tests: [not_null]
@@ -72,6 +96,20 @@ models:
       (`id_registro_fundo`). The source has one row per fund and manager; fund-level columns are
       identical across those rows, and the manager columns keep the first manager by CPF/CNPJ
       (ADR 006). A CNPJ can have more than one registry id. Naming: docs/naming-conventions.md.
+    tests:
+      # RF-05 (2.3): the kept manager row and the manager count agree.
+      - dbt_utils.expression_is_true:
+          expression: "(nr_gestor = 0) = (cpf_cnpj_gestor is null)"
+      # A PF manager has a CPF (11 digits), a PJ manager a CNPJ (14 characters).
+      - dbt_utils.expression_is_true:
+          expression: "tp_pessoa_gestor is null or length(cpf_cnpj_gestor) = case tp_pessoa_gestor when 'PF' then 11 else 14 end"
+          config:
+            severity: warn
+      # A cancellation date exists exactly when the fund is cancelled.
+      - dbt_utils.expression_is_true:
+          expression: "(sit_fundo = 'CANCELADO') = (dt_cancelamento is not null)"
+          config:
+            severity: warn
     columns:
       - name: id_registro_fundo
         description: CVM registry id of the fund; primary key.
@@ -104,12 +142,24 @@ models:
                        "CANCELADO", "INCORPORACAO", "EM SITUACAO ESPECIAL", "EM ANALISE"]
       - name: dt_registro
         description: Registration date at CVM.
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "<= cast(_loaded_at as date)"
+              config:
+                severity: warn
       - name: dt_constituicao
         description: Incorporation date of the fund.
       - name: dt_cancelamento
         description: Cancellation date (null while the fund is not cancelled).
       - name: dt_inicio_situacao
         description: Date the current status started.
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "<= cast(_loaded_at as date)"
+              config:
+                severity: warn
       - name: dt_adaptacao_rcvm175
         description: Date the fund adapted to CVM Resolution 175 (null if not adapted).
       - name: dt_inicio_exercicio_social
@@ -139,12 +189,19 @@ models:
         description: Name of the manager kept on this row.
       - name: nr_gestor
         description: Number of distinct managers of the fund in the source (0 when none is listed).
-        tests: [not_null]
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
       - name: _source
         description: Loader source (`cvm` or `p1-parquet`).
-        tests: [not_null]
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["cvm", "p1-parquet"]
       - name: _source_file
         description: File the row was loaded from.
+        tests: [not_null]
       - name: _loaded_at
         description: Load timestamp (UTC).
         tests: [not_null]
@@ -196,12 +253,30 @@ models:
                        "CANCELADO", "INCORPORACAO", "EM SITUACAO ESPECIAL", "EM ANALISE"]
       - name: dt_registro
         description: Registration date at CVM.
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "<= cast(_loaded_at as date)"
+              config:
+                severity: warn
       - name: dt_constituicao
         description: Incorporation date of the class.
       - name: dt_inicio
         description: Start date of the class operations.
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "<= cast(_loaded_at as date)"
+              config:
+                severity: warn
       - name: dt_inicio_situacao
         description: Date the current status started.
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "<= cast(_loaded_at as date)"
+              config:
+                severity: warn
       - name: tp_classificacao
         description: CVM classification (asset class), upper case without accents.
         tests:
@@ -254,9 +329,13 @@ models:
         description: Name of the controller.
       - name: _source
         description: Loader source (`cvm` or `p1-parquet`).
-        tests: [not_null]
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["cvm", "p1-parquet"]
       - name: _source_file
         description: File the row was loaded from.
+        tests: [not_null]
       - name: _loaded_at
         description: Load timestamp (UTC).
         tests: [not_null]
