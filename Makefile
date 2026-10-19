@@ -38,7 +38,7 @@ sources: deps freshness row-counts  ## RF-01: freshness + row counts + source te
 	dbt test --select "source:*" $(DBT_ARGS)
 
 staging: deps  ## RF-02: build the stg_ models and run their tests (and the source tests)
-	dbt build --select staging $(DBT_ARGS)
+	dbt build --select staging --indirect-selection cautious $(DBT_ARGS)
 
 snapshot: deps  ## RF-04: SCD2 snapshot of the unified registry (with the models upstream)
 	dbt build --select +snp_cvm__fundo_classe $(DBT_ARGS)
