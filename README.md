@@ -58,7 +58,7 @@ One view per source, renamed, typed and standardized; documented and tested in
 
 ## Dimensional model
 
-Star schema (Kimball). Every fact has an explicit grain:
+Star schema (Kimball, [ADR 002](docs/adr/002-star-schema-vs-wide-table.md)). Every fact has an explicit grain; the full design (measures, additivity, keys, class-or-fund resolution) is in [docs/dimensional-model.md](docs/dimensional-model.md):
 
 ```mermaid
 erDiagram
@@ -69,10 +69,12 @@ erDiagram
 
   dim_fundo {
     string sk_fundo PK
+    string cnpj_fundo_classe
+    string tp_registro
     string cnpj_fundo
     string nm_denominacao_social
     string tp_classe
-    string sit_fundo
+    string sit_fundo_classe
     date dt_valido_de
     date dt_valido_ate
   }
@@ -85,6 +87,7 @@ erDiagram
   fct_informe_diario {
     string sk_fundo FK
     date sk_data FK
+    string id_subclasse
     decimal vl_quota
     decimal vl_patrim_liq
     decimal vl_captc_dia
@@ -94,14 +97,17 @@ erDiagram
   fct_captacao_mensal {
     string sk_fundo FK
     date sk_mes FK
-    decimal vl_captc_liquida
+    decimal vl_captc_liquida_mes
+    decimal vl_patrim_liq_fim_mes
   }
 ```
 
-| Fact | Grain |
+| Model | Grain |
 |---|---|
-| `fct_informe_diario` | 1 row per fund per day |
-| `fct_captacao_mensal` | 1 row per fund per month |
+| `fct_informe_diario` | 1 row per fund class (or subclass) per day |
+| `fct_captacao_mensal` | 1 row per fund class per month |
+| `dim_fundo` | 1 row per reporting CNPJ (class, else fund without class) per version (SCD2) |
+| `dim_data` | 1 row per calendar day |
 
 Table and column names follow the source domain in Portuguese (`fundo` = fund, `captacao` = inflow, `cota` = share value).
 
@@ -236,6 +242,7 @@ For development: `make install`, `make lint`, `make test`, `make docs` (dbt docu
 | [06 - Traceability](docs/06-traceability.md) | Requirement → component → test |
 | [Data source](docs/data-source.md) | CVM files, layouts, encoding and key mapping (RF-01) |
 | [Naming conventions](docs/naming-conventions.md) | Layers, model names, column prefixes and types (RNF-05) |
+| [Dimensional model](docs/dimensional-model.md) | Star schema, grain of each fact, surrogate keys, class-or-fund resolution (RF-03) |
 | [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175, staging grain and deduplication |
 
 ## Related projects
