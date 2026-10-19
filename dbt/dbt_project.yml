@@ -22,3 +22,8 @@ models:
     marts:
       +materialized: table
       +schema: marts
+
+# RF-03 (3.2): reference data (national holidays), in its own schema.
+seeds:
+  fundos_dw:
+    +schema: seeds

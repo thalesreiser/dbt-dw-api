@@ -1,4 +1,156 @@
 version: 2
 
-# RF-03: dim_fundo, dim_data, fct_informe_diario, fct_captacao_mensal
-models: []
+# RF-03: dim_fundo, dim_data (3.2); fct_informe_diario, fct_captacao_mensal (3.3).
+# Design: docs/dimensional-model.md; star schema: docs/adr/002-star-schema-vs-wide-table.md.
+
+models:
+  - name: dim_fundo
+    description: >
+      Fund/class dimension. Grain: one row per reporting CNPJ (`cnpj_fundo_classe`, the key of
+      the daily report) and version, at class grain with the fund attributes denormalized, plus
+      fund-only rows (funds not adapted to Resolution 175) and one unknown member
+      (`tp_registro = 'DESCONHECIDO'`, `cnpj_fundo_classe = '00000000000000'`) for facts whose
+      CNPJ does not resolve. Until the SCD2 snapshot of task 3.4 every CNPJ has a single,
+      current version valid from 1900-01-01. Registry status is shown as-is: a fund that is
+      `CANCELADO` in the registry but still reports keeps that status. Built from
+      `int_fundo_classe__unificado`.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [cnpj_fundo_classe, dt_valido_de]
+      - dbt_utils.expression_is_true:
+          expression: "fl_versao_atual = (dt_valido_ate is null)"
+      - dbt_utils.expression_is_true:
+          expression: "(tp_registro = 'CLASSE') = (id_registro_classe is not null)"
+    columns:
+      - name: sk_fundo
+        description: >
+          Surrogate key: `dbt_utils.generate_surrogate_key(['cnpj_fundo_classe', 'dt_valido_de'])`
+          (MD5); one per version.
+        tests: [not_null, unique]
+      - name: cnpj_fundo_classe
+        description: >
+          Natural key: reporting CNPJ (class CNPJ, else fund CNPJ); `00000000000000` for the
+          unknown member. Unique among current versions.
+        tests:
+          - not_null
+          - valid_cnpj
+          - unique:
+              config:
+                where: "fl_versao_atual"
+      - name: tp_registro
+        description: "`CLASSE`, `FUNDO` (fund-only row) or `DESCONHECIDO` (unknown member)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["CLASSE", "FUNDO", "DESCONHECIDO"]
+      - name: id_registro_classe
+        description: CVM registry id of the class; null for fund-only rows and the unknown member.
+      - name: id_registro_fundo
+        description: CVM registry id of the fund (the parent fund for class rows).
+      - name: cnpj_fundo
+        description: CNPJ of the fund (the parent fund for class rows); groups classes by fund.
+      - name: nm_denominacao_social
+        description: Legal name of the class, else of the fund.
+        tests: [not_null]
+      - name: nm_denominacao_social_fundo
+        description: Legal name of the fund.
+      - name: tp_fundo
+        description: Fund type (e.g. FI, FIF, FIDC).
+      - name: tp_classe
+        description: Class type; null for fund-only rows.
+      - name: sit_fundo_classe
+        description: >
+          Registry status of the class, else of the fund (`DESCONHECIDO` for the unknown
+          member), as published by CVM.
+        tests: [not_null]
+      - name: sit_fundo
+        description: Registry status of the fund.
+      - name: tp_classificacao
+        description: CVM classification of the class.
+      - name: tp_classificacao_anbima
+        description: ANBIMA classification of the class.
+      - name: tp_condominio
+        description: Open or closed-end (`ABERTO`, `FECHADO`).
+      - name: tp_publico_alvo
+        description: Target investors of the class.
+      - name: fl_exclusivo
+        description: Exclusive class flag.
+      - name: cnpj_administrador
+        description: CNPJ of the fund administrator.
+      - name: nm_administrador
+        description: Name of the fund administrator.
+      - name: cpf_cnpj_gestor
+        description: CPF or CNPJ of the fund manager (first manager, ADR 006).
+      - name: nm_gestor
+        description: Name of the fund manager (first manager, ADR 006).
+      - name: dt_registro
+        description: Registration date at CVM of the kept registry entry (class, else fund).
+      - name: dt_valido_de
+        description: >
+          Start of the version (inclusive). The first version of every CNPJ starts at
+          1900-01-01 (no registry history before the first snapshot).
+        tests: [not_null]
+      - name: dt_valido_ate
+        description: End of the version (exclusive); null for the current version.
+      - name: fl_versao_atual
+        description: True for the current version of the CNPJ.
+        tests: [not_null]
+
+  - name: dim_data
+    description: >
+      Calendar dimension. Grain: one row per calendar day (`sk_data`), from the first reference
+      month loaded to the end of the current year, generated with `dbt_utils.date_spine`.
+      `fl_dia_util` is a weekday that is not a Brazilian national holiday (seed
+      `feriados_nacionais`; no state or municipal holidays). Role-playing: the monthly fact
+      points `sk_mes` to the first day of the month in this same dimension.
+    columns:
+      - name: sk_data
+        description: The calendar date (surrogate key of type `date`, naming-conventions.md).
+        tests: [not_null, unique]
+      - name: sk_mes
+        description: First day of the month of `sk_data`; the key `fct_captacao_mensal.sk_mes` uses.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_data')
+              field: sk_data
+      - name: nr_ano
+        description: Year.
+        tests: [not_null]
+      - name: nr_trimestre
+        description: Quarter (1-4).
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4]
+              quote: false
+      - name: nr_mes
+        description: Month (1-12).
+        tests: [not_null]
+      - name: nr_dia
+        description: Day of the month.
+        tests: [not_null]
+      - name: nr_dia_semana
+        description: ISO weekday, 1 = Monday ... 7 = Sunday.
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5, 6, 7]
+              quote: false
+      - name: dt_inicio_mes
+        description: First day of the month.
+        tests: [not_null]
+      - name: dt_fim_mes
+        description: Last day of the month.
+        tests: [not_null]
+      - name: fl_fim_de_semana
+        description: True on Saturdays and Sundays.
+        tests: [not_null]
+      - name: fl_feriado
+        description: True on a national holiday of the seed `feriados_nacionais`.
+        tests: [not_null]
+      - name: nm_feriado
+        description: Name of the holiday (names joined with ` / ` when two share a date); null otherwise.
+      - name: fl_dia_util
+        description: "Business day: not a weekend and not a national holiday."
+        tests: [not_null]

@@ -1,0 +1,445 @@
+dt_feriado,nm_feriado,tp_feriado
+2000-01-01,Confraternizacao Universal,FIXO
+2000-03-06,Carnaval (segunda-feira),MOVEL
+2000-03-07,Carnaval (terca-feira),MOVEL
+2000-04-21,Paixao de Cristo,MOVEL
+2000-04-21,Tiradentes,FIXO
+2000-05-01,Dia do Trabalho,FIXO
+2000-06-22,Corpus Christi,MOVEL
+2000-09-07,Independencia do Brasil,FIXO
+2000-10-12,Nossa Senhora Aparecida,FIXO
+2000-11-02,Finados,FIXO
+2000-11-15,Proclamacao da Republica,FIXO
+2000-12-25,Natal,FIXO
+2001-01-01,Confraternizacao Universal,FIXO
+2001-02-26,Carnaval (segunda-feira),MOVEL
+2001-02-27,Carnaval (terca-feira),MOVEL
+2001-04-13,Paixao de Cristo,MOVEL
+2001-04-21,Tiradentes,FIXO
+2001-05-01,Dia do Trabalho,FIXO
+2001-06-14,Corpus Christi,MOVEL
+2001-09-07,Independencia do Brasil,FIXO
+2001-10-12,Nossa Senhora Aparecida,FIXO
+2001-11-02,Finados,FIXO
+2001-11-15,Proclamacao da Republica,FIXO
+2001-12-25,Natal,FIXO
+2002-01-01,Confraternizacao Universal,FIXO
+2002-02-11,Carnaval (segunda-feira),MOVEL
+2002-02-12,Carnaval (terca-feira),MOVEL
+2002-03-29,Paixao de Cristo,MOVEL
+2002-04-21,Tiradentes,FIXO
+2002-05-01,Dia do Trabalho,FIXO
+2002-05-30,Corpus Christi,MOVEL
+2002-09-07,Independencia do Brasil,FIXO
+2002-10-12,Nossa Senhora Aparecida,FIXO
+2002-11-02,Finados,FIXO
+2002-11-15,Proclamacao da Republica,FIXO
+2002-12-25,Natal,FIXO
+2003-01-01,Confraternizacao Universal,FIXO
+2003-03-03,Carnaval (segunda-feira),MOVEL
+2003-03-04,Carnaval (terca-feira),MOVEL
+2003-04-18,Paixao de Cristo,MOVEL
+2003-04-21,Tiradentes,FIXO
+2003-05-01,Dia do Trabalho,FIXO
+2003-06-19,Corpus Christi,MOVEL
+2003-09-07,Independencia do Brasil,FIXO
+2003-10-12,Nossa Senhora Aparecida,FIXO
+2003-11-02,Finados,FIXO
+2003-11-15,Proclamacao da Republica,FIXO
+2003-12-25,Natal,FIXO
+2004-01-01,Confraternizacao Universal,FIXO
+2004-02-23,Carnaval (segunda-feira),MOVEL
+2004-02-24,Carnaval (terca-feira),MOVEL
+2004-04-09,Paixao de Cristo,MOVEL
+2004-04-21,Tiradentes,FIXO
+2004-05-01,Dia do Trabalho,FIXO
+2004-06-10,Corpus Christi,MOVEL
+2004-09-07,Independencia do Brasil,FIXO
+2004-10-12,Nossa Senhora Aparecida,FIXO
+2004-11-02,Finados,FIXO
+2004-11-15,Proclamacao da Republica,FIXO
+2004-12-25,Natal,FIXO
+2005-01-01,Confraternizacao Universal,FIXO
+2005-02-07,Carnaval (segunda-feira),MOVEL
+2005-02-08,Carnaval (terca-feira),MOVEL
+2005-03-25,Paixao de Cristo,MOVEL
+2005-04-21,Tiradentes,FIXO
+2005-05-01,Dia do Trabalho,FIXO
+2005-05-26,Corpus Christi,MOVEL
+2005-09-07,Independencia do Brasil,FIXO
+2005-10-12,Nossa Senhora Aparecida,FIXO
+2005-11-02,Finados,FIXO
+2005-11-15,Proclamacao da Republica,FIXO
+2005-12-25,Natal,FIXO
+2006-01-01,Confraternizacao Universal,FIXO
+2006-02-27,Carnaval (segunda-feira),MOVEL
+2006-02-28,Carnaval (terca-feira),MOVEL
+2006-04-14,Paixao de Cristo,MOVEL
+2006-04-21,Tiradentes,FIXO
+2006-05-01,Dia do Trabalho,FIXO
+2006-06-15,Corpus Christi,MOVEL
+2006-09-07,Independencia do Brasil,FIXO
+2006-10-12,Nossa Senhora Aparecida,FIXO
+2006-11-02,Finados,FIXO
+2006-11-15,Proclamacao da Republica,FIXO
+2006-12-25,Natal,FIXO
+2007-01-01,Confraternizacao Universal,FIXO
+2007-02-19,Carnaval (segunda-feira),MOVEL
+2007-02-20,Carnaval (terca-feira),MOVEL
+2007-04-06,Paixao de Cristo,MOVEL
+2007-04-21,Tiradentes,FIXO
+2007-05-01,Dia do Trabalho,FIXO
+2007-06-07,Corpus Christi,MOVEL
+2007-09-07,Independencia do Brasil,FIXO
+2007-10-12,Nossa Senhora Aparecida,FIXO
+2007-11-02,Finados,FIXO
+2007-11-15,Proclamacao da Republica,FIXO
+2007-12-25,Natal,FIXO
+2008-01-01,Confraternizacao Universal,FIXO
+2008-02-04,Carnaval (segunda-feira),MOVEL
+2008-02-05,Carnaval (terca-feira),MOVEL
+2008-03-21,Paixao de Cristo,MOVEL
+2008-04-21,Tiradentes,FIXO
+2008-05-01,Dia do Trabalho,FIXO
+2008-05-22,Corpus Christi,MOVEL
+2008-09-07,Independencia do Brasil,FIXO
+2008-10-12,Nossa Senhora Aparecida,FIXO
+2008-11-02,Finados,FIXO
+2008-11-15,Proclamacao da Republica,FIXO
+2008-12-25,Natal,FIXO
+2009-01-01,Confraternizacao Universal,FIXO
+2009-02-23,Carnaval (segunda-feira),MOVEL
+2009-02-24,Carnaval (terca-feira),MOVEL
+2009-04-10,Paixao de Cristo,MOVEL
+2009-04-21,Tiradentes,FIXO
+2009-05-01,Dia do Trabalho,FIXO
+2009-06-11,Corpus Christi,MOVEL
+2009-09-07,Independencia do Brasil,FIXO
+2009-10-12,Nossa Senhora Aparecida,FIXO
+2009-11-02,Finados,FIXO
+2009-11-15,Proclamacao da Republica,FIXO
+2009-12-25,Natal,FIXO
+2010-01-01,Confraternizacao Universal,FIXO
+2010-02-15,Carnaval (segunda-feira),MOVEL
+2010-02-16,Carnaval (terca-feira),MOVEL
+2010-04-02,Paixao de Cristo,MOVEL
+2010-04-21,Tiradentes,FIXO
+2010-05-01,Dia do Trabalho,FIXO
+2010-06-03,Corpus Christi,MOVEL
+2010-09-07,Independencia do Brasil,FIXO
+2010-10-12,Nossa Senhora Aparecida,FIXO
+2010-11-02,Finados,FIXO
+2010-11-15,Proclamacao da Republica,FIXO
+2010-12-25,Natal,FIXO
+2011-01-01,Confraternizacao Universal,FIXO
+2011-03-07,Carnaval (segunda-feira),MOVEL
+2011-03-08,Carnaval (terca-feira),MOVEL
+2011-04-21,Tiradentes,FIXO
+2011-04-22,Paixao de Cristo,MOVEL
+2011-05-01,Dia do Trabalho,FIXO
+2011-06-23,Corpus Christi,MOVEL
+2011-09-07,Independencia do Brasil,FIXO
+2011-10-12,Nossa Senhora Aparecida,FIXO
+2011-11-02,Finados,FIXO
+2011-11-15,Proclamacao da Republica,FIXO
+2011-12-25,Natal,FIXO
+2012-01-01,Confraternizacao Universal,FIXO
+2012-02-20,Carnaval (segunda-feira),MOVEL
+2012-02-21,Carnaval (terca-feira),MOVEL
+2012-04-06,Paixao de Cristo,MOVEL
+2012-04-21,Tiradentes,FIXO
+2012-05-01,Dia do Trabalho,FIXO
+2012-06-07,Corpus Christi,MOVEL
+2012-09-07,Independencia do Brasil,FIXO
+2012-10-12,Nossa Senhora Aparecida,FIXO
+2012-11-02,Finados,FIXO
+2012-11-15,Proclamacao da Republica,FIXO
+2012-12-25,Natal,FIXO
+2013-01-01,Confraternizacao Universal,FIXO
+2013-02-11,Carnaval (segunda-feira),MOVEL
+2013-02-12,Carnaval (terca-feira),MOVEL
+2013-03-29,Paixao de Cristo,MOVEL
+2013-04-21,Tiradentes,FIXO
+2013-05-01,Dia do Trabalho,FIXO
+2013-05-30,Corpus Christi,MOVEL
+2013-09-07,Independencia do Brasil,FIXO
+2013-10-12,Nossa Senhora Aparecida,FIXO
+2013-11-02,Finados,FIXO
+2013-11-15,Proclamacao da Republica,FIXO
+2013-12-25,Natal,FIXO
+2014-01-01,Confraternizacao Universal,FIXO
+2014-03-03,Carnaval (segunda-feira),MOVEL
+2014-03-04,Carnaval (terca-feira),MOVEL
+2014-04-18,Paixao de Cristo,MOVEL
+2014-04-21,Tiradentes,FIXO
+2014-05-01,Dia do Trabalho,FIXO
+2014-06-19,Corpus Christi,MOVEL
+2014-09-07,Independencia do Brasil,FIXO
+2014-10-12,Nossa Senhora Aparecida,FIXO
+2014-11-02,Finados,FIXO
+2014-11-15,Proclamacao da Republica,FIXO
+2014-12-25,Natal,FIXO
+2015-01-01,Confraternizacao Universal,FIXO
+2015-02-16,Carnaval (segunda-feira),MOVEL
+2015-02-17,Carnaval (terca-feira),MOVEL
+2015-04-03,Paixao de Cristo,MOVEL
+2015-04-21,Tiradentes,FIXO
+2015-05-01,Dia do Trabalho,FIXO
+2015-06-04,Corpus Christi,MOVEL
+2015-09-07,Independencia do Brasil,FIXO
+2015-10-12,Nossa Senhora Aparecida,FIXO
+2015-11-02,Finados,FIXO
+2015-11-15,Proclamacao da Republica,FIXO
+2015-12-25,Natal,FIXO
+2016-01-01,Confraternizacao Universal,FIXO
+2016-02-08,Carnaval (segunda-feira),MOVEL
+2016-02-09,Carnaval (terca-feira),MOVEL
+2016-03-25,Paixao de Cristo,MOVEL
+2016-04-21,Tiradentes,FIXO
+2016-05-01,Dia do Trabalho,FIXO
+2016-05-26,Corpus Christi,MOVEL
+2016-09-07,Independencia do Brasil,FIXO
+2016-10-12,Nossa Senhora Aparecida,FIXO
+2016-11-02,Finados,FIXO
+2016-11-15,Proclamacao da Republica,FIXO
+2016-12-25,Natal,FIXO
+2017-01-01,Confraternizacao Universal,FIXO
+2017-02-27,Carnaval (segunda-feira),MOVEL
+2017-02-28,Carnaval (terca-feira),MOVEL
+2017-04-14,Paixao de Cristo,MOVEL
+2017-04-21,Tiradentes,FIXO
+2017-05-01,Dia do Trabalho,FIXO
+2017-06-15,Corpus Christi,MOVEL
+2017-09-07,Independencia do Brasil,FIXO
+2017-10-12,Nossa Senhora Aparecida,FIXO
+2017-11-02,Finados,FIXO
+2017-11-15,Proclamacao da Republica,FIXO
+2017-12-25,Natal,FIXO
+2018-01-01,Confraternizacao Universal,FIXO
+2018-02-12,Carnaval (segunda-feira),MOVEL
+2018-02-13,Carnaval (terca-feira),MOVEL
+2018-03-30,Paixao de Cristo,MOVEL
+2018-04-21,Tiradentes,FIXO
+2018-05-01,Dia do Trabalho,FIXO
+2018-05-31,Corpus Christi,MOVEL
+2018-09-07,Independencia do Brasil,FIXO
+2018-10-12,Nossa Senhora Aparecida,FIXO
+2018-11-02,Finados,FIXO
+2018-11-15,Proclamacao da Republica,FIXO
+2018-12-25,Natal,FIXO
+2019-01-01,Confraternizacao Universal,FIXO
+2019-03-04,Carnaval (segunda-feira),MOVEL
+2019-03-05,Carnaval (terca-feira),MOVEL
+2019-04-19,Paixao de Cristo,MOVEL
+2019-04-21,Tiradentes,FIXO
+2019-05-01,Dia do Trabalho,FIXO
+2019-06-20,Corpus Christi,MOVEL
+2019-09-07,Independencia do Brasil,FIXO
+2019-10-12,Nossa Senhora Aparecida,FIXO
+2019-11-02,Finados,FIXO
+2019-11-15,Proclamacao da Republica,FIXO
+2019-12-25,Natal,FIXO
+2020-01-01,Confraternizacao Universal,FIXO
+2020-02-24,Carnaval (segunda-feira),MOVEL
+2020-02-25,Carnaval (terca-feira),MOVEL
+2020-04-10,Paixao de Cristo,MOVEL
+2020-04-21,Tiradentes,FIXO
+2020-05-01,Dia do Trabalho,FIXO
+2020-06-11,Corpus Christi,MOVEL
+2020-09-07,Independencia do Brasil,FIXO
+2020-10-12,Nossa Senhora Aparecida,FIXO
+2020-11-02,Finados,FIXO
+2020-11-15,Proclamacao da Republica,FIXO
+2020-12-25,Natal,FIXO
+2021-01-01,Confraternizacao Universal,FIXO
+2021-02-15,Carnaval (segunda-feira),MOVEL
+2021-02-16,Carnaval (terca-feira),MOVEL
+2021-04-02,Paixao de Cristo,MOVEL
+2021-04-21,Tiradentes,FIXO
+2021-05-01,Dia do Trabalho,FIXO
+2021-06-03,Corpus Christi,MOVEL
+2021-09-07,Independencia do Brasil,FIXO
+2021-10-12,Nossa Senhora Aparecida,FIXO
+2021-11-02,Finados,FIXO
+2021-11-15,Proclamacao da Republica,FIXO
+2021-12-25,Natal,FIXO
+2022-01-01,Confraternizacao Universal,FIXO
+2022-02-28,Carnaval (segunda-feira),MOVEL
+2022-03-01,Carnaval (terca-feira),MOVEL
+2022-04-15,Paixao de Cristo,MOVEL
+2022-04-21,Tiradentes,FIXO
+2022-05-01,Dia do Trabalho,FIXO
+2022-06-16,Corpus Christi,MOVEL
+2022-09-07,Independencia do Brasil,FIXO
+2022-10-12,Nossa Senhora Aparecida,FIXO
+2022-11-02,Finados,FIXO
+2022-11-15,Proclamacao da Republica,FIXO
+2022-12-25,Natal,FIXO
+2023-01-01,Confraternizacao Universal,FIXO
+2023-02-20,Carnaval (segunda-feira),MOVEL
+2023-02-21,Carnaval (terca-feira),MOVEL
+2023-04-07,Paixao de Cristo,MOVEL
+2023-04-21,Tiradentes,FIXO
+2023-05-01,Dia do Trabalho,FIXO
+2023-06-08,Corpus Christi,MOVEL
+2023-09-07,Independencia do Brasil,FIXO
+2023-10-12,Nossa Senhora Aparecida,FIXO
+2023-11-02,Finados,FIXO
+2023-11-15,Proclamacao da Republica,FIXO
+2023-12-25,Natal,FIXO
+2024-01-01,Confraternizacao Universal,FIXO
+2024-02-12,Carnaval (segunda-feira),MOVEL
+2024-02-13,Carnaval (terca-feira),MOVEL
+2024-03-29,Paixao de Cristo,MOVEL
+2024-04-21,Tiradentes,FIXO
+2024-05-01,Dia do Trabalho,FIXO
+2024-05-30,Corpus Christi,MOVEL
+2024-09-07,Independencia do Brasil,FIXO
+2024-10-12,Nossa Senhora Aparecida,FIXO
+2024-11-02,Finados,FIXO
+2024-11-15,Proclamacao da Republica,FIXO
+2024-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2024-12-25,Natal,FIXO
+2025-01-01,Confraternizacao Universal,FIXO
+2025-03-03,Carnaval (segunda-feira),MOVEL
+2025-03-04,Carnaval (terca-feira),MOVEL
+2025-04-18,Paixao de Cristo,MOVEL
+2025-04-21,Tiradentes,FIXO
+2025-05-01,Dia do Trabalho,FIXO
+2025-06-19,Corpus Christi,MOVEL
+2025-09-07,Independencia do Brasil,FIXO
+2025-10-12,Nossa Senhora Aparecida,FIXO
+2025-11-02,Finados,FIXO
+2025-11-15,Proclamacao da Republica,FIXO
+2025-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2025-12-25,Natal,FIXO
+2026-01-01,Confraternizacao Universal,FIXO
+2026-02-16,Carnaval (segunda-feira),MOVEL
+2026-02-17,Carnaval (terca-feira),MOVEL
+2026-04-03,Paixao de Cristo,MOVEL
+2026-04-21,Tiradentes,FIXO
+2026-05-01,Dia do Trabalho,FIXO
+2026-06-04,Corpus Christi,MOVEL
+2026-09-07,Independencia do Brasil,FIXO
+2026-10-12,Nossa Senhora Aparecida,FIXO
+2026-11-02,Finados,FIXO
+2026-11-15,Proclamacao da Republica,FIXO
+2026-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2026-12-25,Natal,FIXO
+2027-01-01,Confraternizacao Universal,FIXO
+2027-02-08,Carnaval (segunda-feira),MOVEL
+2027-02-09,Carnaval (terca-feira),MOVEL
+2027-03-26,Paixao de Cristo,MOVEL
+2027-04-21,Tiradentes,FIXO
+2027-05-01,Dia do Trabalho,FIXO
+2027-05-27,Corpus Christi,MOVEL
+2027-09-07,Independencia do Brasil,FIXO
+2027-10-12,Nossa Senhora Aparecida,FIXO
+2027-11-02,Finados,FIXO
+2027-11-15,Proclamacao da Republica,FIXO
+2027-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2027-12-25,Natal,FIXO
+2028-01-01,Confraternizacao Universal,FIXO
+2028-02-28,Carnaval (segunda-feira),MOVEL
+2028-02-29,Carnaval (terca-feira),MOVEL
+2028-04-14,Paixao de Cristo,MOVEL
+2028-04-21,Tiradentes,FIXO
+2028-05-01,Dia do Trabalho,FIXO
+2028-06-15,Corpus Christi,MOVEL
+2028-09-07,Independencia do Brasil,FIXO
+2028-10-12,Nossa Senhora Aparecida,FIXO
+2028-11-02,Finados,FIXO
+2028-11-15,Proclamacao da Republica,FIXO
+2028-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2028-12-25,Natal,FIXO
+2029-01-01,Confraternizacao Universal,FIXO
+2029-02-12,Carnaval (segunda-feira),MOVEL
+2029-02-13,Carnaval (terca-feira),MOVEL
+2029-03-30,Paixao de Cristo,MOVEL
+2029-04-21,Tiradentes,FIXO
+2029-05-01,Dia do Trabalho,FIXO
+2029-05-31,Corpus Christi,MOVEL
+2029-09-07,Independencia do Brasil,FIXO
+2029-10-12,Nossa Senhora Aparecida,FIXO
+2029-11-02,Finados,FIXO
+2029-11-15,Proclamacao da Republica,FIXO
+2029-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2029-12-25,Natal,FIXO
+2030-01-01,Confraternizacao Universal,FIXO
+2030-03-04,Carnaval (segunda-feira),MOVEL
+2030-03-05,Carnaval (terca-feira),MOVEL
+2030-04-19,Paixao de Cristo,MOVEL
+2030-04-21,Tiradentes,FIXO
+2030-05-01,Dia do Trabalho,FIXO
+2030-06-20,Corpus Christi,MOVEL
+2030-09-07,Independencia do Brasil,FIXO
+2030-10-12,Nossa Senhora Aparecida,FIXO
+2030-11-02,Finados,FIXO
+2030-11-15,Proclamacao da Republica,FIXO
+2030-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2030-12-25,Natal,FIXO
+2031-01-01,Confraternizacao Universal,FIXO
+2031-02-24,Carnaval (segunda-feira),MOVEL
+2031-02-25,Carnaval (terca-feira),MOVEL
+2031-04-11,Paixao de Cristo,MOVEL
+2031-04-21,Tiradentes,FIXO
+2031-05-01,Dia do Trabalho,FIXO
+2031-06-12,Corpus Christi,MOVEL
+2031-09-07,Independencia do Brasil,FIXO
+2031-10-12,Nossa Senhora Aparecida,FIXO
+2031-11-02,Finados,FIXO
+2031-11-15,Proclamacao da Republica,FIXO
+2031-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2031-12-25,Natal,FIXO
+2032-01-01,Confraternizacao Universal,FIXO
+2032-02-09,Carnaval (segunda-feira),MOVEL
+2032-02-10,Carnaval (terca-feira),MOVEL
+2032-03-26,Paixao de Cristo,MOVEL
+2032-04-21,Tiradentes,FIXO
+2032-05-01,Dia do Trabalho,FIXO
+2032-05-27,Corpus Christi,MOVEL
+2032-09-07,Independencia do Brasil,FIXO
+2032-10-12,Nossa Senhora Aparecida,FIXO
+2032-11-02,Finados,FIXO
+2032-11-15,Proclamacao da Republica,FIXO
+2032-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2032-12-25,Natal,FIXO
+2033-01-01,Confraternizacao Universal,FIXO
+2033-02-28,Carnaval (segunda-feira),MOVEL
+2033-03-01,Carnaval (terca-feira),MOVEL
+2033-04-15,Paixao de Cristo,MOVEL
+2033-04-21,Tiradentes,FIXO
+2033-05-01,Dia do Trabalho,FIXO
+2033-06-16,Corpus Christi,MOVEL
+2033-09-07,Independencia do Brasil,FIXO
+2033-10-12,Nossa Senhora Aparecida,FIXO
+2033-11-02,Finados,FIXO
+2033-11-15,Proclamacao da Republica,FIXO
+2033-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2033-12-25,Natal,FIXO
+2034-01-01,Confraternizacao Universal,FIXO
+2034-02-20,Carnaval (segunda-feira),MOVEL
+2034-02-21,Carnaval (terca-feira),MOVEL
+2034-04-07,Paixao de Cristo,MOVEL
+2034-04-21,Tiradentes,FIXO
+2034-05-01,Dia do Trabalho,FIXO
+2034-06-08,Corpus Christi,MOVEL
+2034-09-07,Independencia do Brasil,FIXO
+2034-10-12,Nossa Senhora Aparecida,FIXO
+2034-11-02,Finados,FIXO
+2034-11-15,Proclamacao da Republica,FIXO
+2034-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2034-12-25,Natal,FIXO
+2035-01-01,Confraternizacao Universal,FIXO
+2035-02-05,Carnaval (segunda-feira),MOVEL
+2035-02-06,Carnaval (terca-feira),MOVEL
+2035-03-23,Paixao de Cristo,MOVEL
+2035-04-21,Tiradentes,FIXO
+2035-05-01,Dia do Trabalho,FIXO
+2035-05-24,Corpus Christi,MOVEL
+2035-09-07,Independencia do Brasil,FIXO
+2035-10-12,Nossa Senhora Aparecida,FIXO
+2035-11-02,Finados,FIXO
+2035-11-15,Proclamacao da Republica,FIXO
+2035-11-20,Dia Nacional de Zumbi e da Consciencia Negra,FIXO
+2035-12-25,Natal,FIXO

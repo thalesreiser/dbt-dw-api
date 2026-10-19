@@ -56,6 +56,24 @@ One view per source, renamed, typed and standardized; documented and tested in
 | `stg_cvm__cadastro_fundos` | `cvm.cadastro_fundos` | 1 row per fund registry id (`id_registro_fundo`); source has one row per fund and manager | 89,502 (from 90,646) |
 | `stg_cvm__cadastro_classes` | `cvm.cadastro_classes` | 1 row per class registry id (`id_registro_classe`) | 36,865 (from 36,869) |
 
+### Intermediate and mart models (RF-03)
+
+Documented and tested in [`_int__models.yml`](dbt/models/intermediate/_int__models.yml) and
+[`_marts.yml`](dbt/models/marts/_marts.yml); `make marts` builds them with everything upstream
+(`dbt build --select +marts`). Facts come in task 3.3, the SCD2 history in task 3.4.
+
+| Model | Materialization | Grain | Rows (2026-09 / registry of 2026-10-17) |
+|---|---|---|---|
+| `int_fundo_classe__unificado` | ephemeral | 1 row per reporting CNPJ (`cnpj_fundo_classe`): class rows with their fund's attributes, plus fund-only rows | 81,767 (36,857 classes + 44,910 fund-only) |
+| `dim_fundo` | table | 1 row per reporting CNPJ per version (one current version until 3.4) + unknown member; key `sk_fundo` | 81,768 |
+| `dim_data` | table | 1 row per calendar day, first month loaded to the end of the current year; key `sk_data` | 122 (2026-09-01 to 2026-12-31, 83 business days) |
+| seed `feriados_nacionais` | seed | 1 row per national holiday and date, 2000-2035 | 444 |
+
+`fl_dia_util` in `dim_data` excludes weekends and the national holidays of the seed, which is
+generated from the rules in law by [`scripts/generate_national_holidays.py`](scripts/generate_national_holidays.py)
+(fixed dates plus Easter-based Carnival, Good Friday and Corpus Christi, as in the national
+financial calendar); state and municipal holidays are out of scope.
+
 ## Dimensional model
 
 Star schema (Kimball, [ADR 002](docs/adr/002-star-schema-vs-wide-table.md)). Every fact has an explicit grain; the full design (measures, additivity, keys, class-or-fund resolution) is in [docs/dimensional-model.md](docs/dimensional-model.md):
