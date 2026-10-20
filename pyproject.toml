@@ -39,4 +39,6 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=fundos_api --cov-report=term-missing"
+# Integration tests (task 5.6) build a test warehouse with dbt: run them with `make test-integration`.
+addopts = "--cov=fundos_api --cov-report=term-missing -m \"not integration\""
+markers = ["integration: API over a test warehouse built by the real dbt project (needs dbt)"]

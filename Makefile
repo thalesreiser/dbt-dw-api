@@ -8,7 +8,7 @@ COMPETENCIA ?=
 COMPETENCIAS ?= 1
 LOAD_ARGS = --competencias $(COMPETENCIAS) $(if $(COMPETENCIA),--competencia $(COMPETENCIA),)
 
-.PHONY: install up down deps load load-p1 freshness row-counts sources staging snapshot scd2-sim negative-tests negative-fixture marts build docs docs-coverage docs-serve api lint fmt test
+.PHONY: install up down deps load load-p1 freshness row-counts sources staging snapshot scd2-sim negative-tests negative-fixture marts build docs docs-coverage docs-serve api lint fmt test test-integration
 
 install:
 	pip install -e ".[dev,dbt]" && pre-commit install
@@ -76,5 +76,8 @@ lint:
 fmt:
 	ruff check --fix src tests scripts && black src tests scripts
 
-test:
+test:  ## unit tests (the integration tests are excluded)
 	pytest
+
+test-integration: deps  ## 5.6: API integration tests over a test warehouse built by dbt from synthetic raw data
+	pytest -m integration
