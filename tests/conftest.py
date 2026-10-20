@@ -6,6 +6,7 @@ from pathlib import Path
 
 import duckdb
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from fundos_api.config import Settings
@@ -14,6 +15,9 @@ from fundos_api.main import create_app
 # Synthetic CNPJs with valid check digits; they do not belong to real funds.
 CNPJ_CLASSE = "11222333000181"
 CNPJ_FUNDO = "11444777000161"
+
+# Key the whole suite sends; set as `API_KEY` for every test (RF-10).
+TEST_API_KEY = "test-api-key"
 
 MARTS_DDL = """
 create schema marts;
@@ -70,6 +74,18 @@ def build_warehouse(path: Path, *, with_rows: bool = True) -> Path:
     return path
 
 
+def api_client(app: FastAPI, *, api_key: str | None = TEST_API_KEY) -> TestClient:
+    """Test client that sends `X-API-Key` on every request (none when `api_key` is None)."""
+    headers = {"X-API-Key": api_key} if api_key is not None else {}
+    return TestClient(app, headers=headers)
+
+
+@pytest.fixture(autouse=True)
+def _api_key_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every `Settings` built in a test gets the test key unless it overrides `api_key`."""
+    monkeypatch.setenv("API_KEY", TEST_API_KEY)
+
+
 @pytest.fixture
 def warehouse(tmp_path: Path) -> Path:
     return build_warehouse(tmp_path / "warehouse.duckdb")
@@ -82,4 +98,4 @@ def settings(warehouse: Path) -> Settings:
 
 @pytest.fixture
 def client(settings: Settings) -> TestClient:
-    return TestClient(create_app(settings))
+    return api_client(create_app(settings))
