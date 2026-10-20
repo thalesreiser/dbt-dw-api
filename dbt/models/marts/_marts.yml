@@ -177,6 +177,38 @@ models:
           combination_of_columns: [cnpj_fundo_classe, id_subclasse, sk_data]
       - dbt_utils.expression_is_true:
           expression: "dt_mes_competencia = date_trunc('month', sk_data)"
+      # RF-05 (4.1): RN-01 at the daily grain; RN-02 types, signs and dates. Named so
+      # scripts/negative_tests.py can assert them.
+      - net_inflow:
+          name: rn01_fct_informe_diario_net_inflow
+          net: vl_captc_liquida_dia
+          inflow: vl_captc_dia
+          redemption: vl_resg_dia
+      - columns_data_type:
+          name: rn02_fct_informe_diario_money_is_decimal
+          columns: [vl_total, vl_patrim_liq, vl_captc_dia, vl_resg_dia, vl_captc_liquida_dia]
+          data_type: "DECIMAL(%,2)"
+      - columns_data_type:
+          name: rn02_fct_informe_diario_quota_is_decimal
+          columns: [vl_quota]
+          data_type: "DECIMAL(%,12)"
+      - columns_data_type:
+          name: rn02_fct_informe_diario_dates_are_date
+          columns: [sk_data, dt_mes_competencia]
+          data_type: "DATE"
+      - dbt_utils.expression_is_true:
+          name: rn02_fct_informe_diario_no_future_date
+          expression: "sk_data <= current_date"
+      - dbt_utils.expression_is_true:
+          name: rn02_fct_informe_diario_flows_not_negative
+          expression: "coalesce(vl_captc_dia, 0) >= 0 and coalesce(vl_resg_dia, 0) >= 0"
+      - dbt_utils.recency:
+          name: rf05_fct_informe_diario_recency
+          datepart: month
+          field: sk_data
+          interval: 3
+          config:
+            severity: warn
     columns:
       - name: sk_fundo
         description: >
@@ -234,6 +266,36 @@ models:
           expression: "vl_captc_liquida_mes = vl_captc_mes - vl_resg_mes"
       - dbt_utils.expression_is_true:
           expression: "dt_ultimo_informe >= sk_mes and dt_ultimo_informe <= last_day(sk_mes)"
+      # RF-05 (4.1): RN-01 at the monthly grain; RN-02 types, signs and dates. Named so
+      # scripts/negative_tests.py can assert them.
+      - net_inflow:
+          name: rn01_fct_captacao_mensal_net_inflow
+          net: vl_captc_liquida_mes
+          inflow: vl_captc_mes
+          redemption: vl_resg_mes
+      - columns_data_type:
+          name: rn02_fct_captacao_mensal_money_is_decimal
+          columns: [vl_captc_mes, vl_resg_mes, vl_captc_liquida_mes, vl_patrim_liq_fim_mes]
+          data_type: "DECIMAL(%,2)"
+      - columns_data_type:
+          name: rn02_fct_captacao_mensal_dates_are_date
+          columns: [sk_mes, dt_ultimo_informe]
+          data_type: "DATE"
+      - dbt_utils.expression_is_true:
+          name: rn02_fct_captacao_mensal_month_key_is_first_day
+          expression: "sk_mes = date_trunc('month', sk_mes)"
+      - dbt_utils.expression_is_true:
+          name: rn02_fct_captacao_mensal_no_future_date
+          expression: "dt_ultimo_informe <= current_date"
+      - dbt_utils.expression_is_true:
+          name: rn02_fct_captacao_mensal_flows_not_negative
+          expression: "vl_captc_mes >= 0 and vl_resg_mes >= 0"
+      - dbt_utils.expression_is_true:
+          name: rf05_fct_captacao_mensal_days_in_month
+          expression: "nr_dias_informados between 1 and day(last_day(sk_mes))"
+      - dbt_utils.fewer_rows_than:
+          name: rf05_fct_captacao_mensal_fewer_rows_than_daily
+          compare_model: ref('fct_informe_diario')
     columns:
       - name: sk_fundo
         description: FK to `dim_fundo`; the version valid on `dt_ultimo_informe` (unknown member when none).
