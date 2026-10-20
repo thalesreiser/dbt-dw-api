@@ -30,7 +30,7 @@ The MIT license applies to the **code**, not to the data it processes.
 ## API usage
 
 - The API is **read-only** and designed to run locally. It must **not** be exposed to the internet without a security review.
-- The API key and the rate limit (RF-10) are **not implemented yet**: until they are, the API has no authentication and must stay bound to `127.0.0.1` (see [SECURITY.md](SECURITY.md)). Once RF-10 lands, the key goes in your `.env` and must never be published.
+- Every `/v1/*` route requires an API key in the `X-API-Key` header and is rate limited per key (RF-10): 401 without a valid key, 429 above the limit, 503 when no key is configured. The key goes in your `.env` and must never be published. The rate limit is per process and in memory, a courtesy limit rather than protection against abuse; keep the API bound to `127.0.0.1` (see [SECURITY.md](SECURITY.md)).
 - Load tests must only target your own local instance.
 
 ## Security
