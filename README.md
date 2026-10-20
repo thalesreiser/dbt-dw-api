@@ -266,6 +266,19 @@ The fixture suite covers null and duplicate keys, orphan keys (registry and fact
 RN-01, RN-02 (negative flow, future date, date outside the reference month) and an SCD2 overlap;
 the case -> failing tests table is in [docs/testing.md](docs/testing.md).
 
+**API integration tests (task 5.6).** Unit tests (`make test`) use a hand-built synthetic DuckDB;
+the integration tests build a **test warehouse with the real dbt project** from synthetic raw
+rows (`tests/fixtures/warehouse/`, synthetic CNPJs only) and call every endpoint end to end with
+httpx, cross-checking the values with direct queries on the marts:
+
+```bash
+make test-integration  # dbt build of the test warehouse (~1 min) + pytest -m integration
+python scripts/build_test_warehouse.py --output data/test_warehouse.duckdb  # warehouse only
+```
+
+They are marked `integration`, excluded from plain `pytest` and run in the CI job
+`api-integration`; details in [docs/testing.md](docs/testing.md#api-integration-tests).
+
 ## Stack
 
 | Layer | Technology | Why |
