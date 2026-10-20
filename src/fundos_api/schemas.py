@@ -107,3 +107,18 @@ class SerieFundo(_Model):
     inicio: date = Field(description="First day of the period (inclusive).")
     fim: date = Field(description="Last day of the period (inclusive).")
     items: list[PontoSerie]
+
+
+class RankingCaptacaoItem(CaptacaoMensal):
+    """One position of the monthly net inflows ranking (RF-09)."""
+
+    posicao: int = Field(ge=1, description="Position in the ranking, starting at 1.")
+
+
+class RankingCaptacao(_Model):
+    """Top N funds/classes of a month by net inflows (RF-09, RN-01)."""
+
+    sk_mes: date = Field(description="Reference month (first day).")
+    ordem: Literal["desc", "asc"]
+    top: int = Field(ge=1)
+    items: list[RankingCaptacaoItem]

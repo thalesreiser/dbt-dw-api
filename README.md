@@ -213,6 +213,24 @@ class as in `fct_captacao_mensal` (`vl_quota` is null on a day with more than on
 `id_subclasse` is always null). A CNPJ absent from `dim_fundo` (any version) gives **404**; a
 known CNPJ without reports in the period gives **200** with `"items": []`.
 
+**`GET /v1/rankings/captacao`** (RF-09) ranks the funds/classes of a month by net inflows
+(`vl_captc_liquida_mes` = inflows - redemptions, RN-01) from `fct_captacao_mensal`. Parameters:
+`mes` (`YYYY-MM`, default: latest month loaded), `top` (1-100, default 10) and `ordem`
+(`desc` = largest net inflows first, default; `asc` = largest net outflows first). Ties are
+broken by CNPJ (ascending). Each item has `posicao`, `cnpj_fundo_classe`, the name from the
+current `dim_fundo` version, `vl_captc_liquida_mes`, `vl_captc_mes`, `vl_resg_mes`,
+`vl_patrim_liq_fim_mes`, `nr_cotst_fim_mes` and `nr_dias_informados`; amounts are decimal
+strings. A month without data gives **404** (`{"detail": "no data for month 2026-07"}`); an
+invalid `mes`, `top` or `ordem` gives **422**.
+
+```json
+{"sk_mes": "2026-09-01", "ordem": "desc", "top": 10, "items": [
+  {"posicao": 1, "cnpj_fundo_classe": "<CNPJ>", "nm_denominacao_social": "<name>",
+   "sk_mes": "2026-09-01", "vl_captc_mes": "20.50", "vl_resg_mes": "0.50",
+   "vl_captc_liquida_mes": "20.00", "vl_patrim_liq_fim_mes": "1000.10",
+   "nr_cotst_fim_mes": 7, "nr_dias_informados": 21}]}
+```
+
 ## Quality at every level
 
 | Level | What it guarantees | Tool |
@@ -261,8 +279,8 @@ make up                                                  # start the API on loca
 curl localhost:8000/health                               # health check
 ```
 
-The endpoints `/v1/...` with the `X-API-Key` header arrive with epic 5 (RF-07 to RF-10); today
-the API only serves `/health`.
+The API serves `/health`, `GET /v1/fundos` (RF-07), `GET /v1/fundos/{cnpj}/serie` (RF-08) and
+`GET /v1/rankings/captacao` (RF-09); the `X-API-Key` header and rate limit arrive with RF-10.
 
 **Loading the sources (RF-01).** No data from P1 yet? Load straight from the CVM open data
 (R-P3-01) into `data/warehouse.duckdb` (override with `DUCKDB_PATH`), then check the sources:
