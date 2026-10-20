@@ -67,6 +67,10 @@ jobs:
           after=$(count)
           echo "fct_informe_diario rows: $before -> $after"
           test "$before" = "$after"
+      # RF-05 acceptance (4.1): inject rows breaking RN-01 and RN-02 into a copy of the
+      # warehouse and assert that the rule tests fail on them (and pass before).
+      - name: Negative tests (RN-01, RN-02)
+        run: make negative-tests
       # RF-04 acceptance (3.4): change one registry attribute on a copy of the warehouse,
       # snapshot again and assert two versions with contiguous validity.
       - name: SCD2 simulation
