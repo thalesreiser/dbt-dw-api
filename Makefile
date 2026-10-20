@@ -8,7 +8,7 @@ COMPETENCIA ?=
 COMPETENCIAS ?= 1
 LOAD_ARGS = --competencias $(COMPETENCIAS) $(if $(COMPETENCIA),--competencia $(COMPETENCIA),)
 
-.PHONY: install up down deps load load-p1 freshness row-counts sources staging snapshot scd2-sim marts build docs api lint fmt test
+.PHONY: install up down deps load load-p1 freshness row-counts sources staging snapshot scd2-sim negative-tests marts build docs docs-coverage docs-serve api lint fmt test
 
 install:
 	pip install -e ".[dev,dbt]" && pre-commit install
@@ -46,14 +46,23 @@ snapshot: deps  ## RF-04: SCD2 snapshot of the unified registry (with the models
 scd2-sim:  ## RF-04: simulate a registry change on a copy of the warehouse; prove 2 versions
 	$(PYTHON) scripts/simulate_scd2_change.py
 
+negative-tests:  ## RF-05: inject rows breaking RN-01/RN-02 into a copy of the warehouse; assert the tests fail
+	$(PYTHON) scripts/negative_tests.py
+
 marts: deps  ## RF-03: build the seeds and the marts with everything upstream, and run their tests
 	dbt build --select +marts $(DBT_ARGS)
 
 build: deps  ## RNF-02: fails if any test fails
 	dbt build $(DBT_ARGS)
 
-docs:  ## RF-06
+docs: deps  ## RF-06: dbt docs (manifest + catalog; needs the built warehouse for the catalog)
 	dbt docs generate $(DBT_ARGS)
+
+docs-coverage:  ## RF-06: fail if a model, snapshot, seed or exposure, or a column, lacks a description
+	$(PYTHON) scripts/check_docs_coverage.py --target dbt/target
+
+docs-serve:  ## RF-06: open the generated docs on localhost:8080
+	dbt docs serve --port 8080 $(DBT_ARGS)
 
 api:  ## RNF-03: read-only API on localhost:8000 (reads DUCKDB_PATH)
 	uvicorn fundos_api.main:app --reload --host 127.0.0.1 --port 8000

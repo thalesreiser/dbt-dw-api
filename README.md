@@ -245,6 +245,21 @@ Source URLs, layouts and the registry choice after CVM Resolution 175 are in
 
 For development: `make install`, `make lint`, `make test`, `make docs` (dbt documentation and lineage) and `make api` (server with reload).
 
+**Documentation and lineage (RF-06).** After `make marts` (the catalog reads the built
+warehouse), generate the dbt docs, check that nothing is undocumented and open them:
+
+```bash
+make docs           # dbt docs generate -> dbt/target/{index.html,manifest.json,catalog.json}
+make docs-coverage  # fails if a model, snapshot, seed, exposure or column has no description
+make docs-serve     # http://localhost:8080 (lineage graph: button at the bottom right)
+```
+
+Every model, snapshot, seed and column is described in the `*.yml` files; repeated concepts
+(`cnpj_fundo_classe`, SCD2 validity, RN-01) are `{% docs %}` blocks in `dbt/models/docs.md`, and
+the API is the exposure `fundos_api`. The lineage is summarized in
+[docs/dimensional-model.md](docs/dimensional-model.md#lineage). CI uploads the generated docs as
+the artifact `dbt-docs` of the `sources` job (publication on GitHub Pages: task 7.3).
+
 ## Repository layout
 
 ```
