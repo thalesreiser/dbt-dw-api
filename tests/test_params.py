@@ -45,13 +45,18 @@ def test_pagination_valid(probe: TestClient) -> None:
         "limit=5000",  # above the hard cap
         "offset=-1",
         "offset=1000001",
-        "unknown=1",
+        "limit=10&offset=x",
     ],
 )
 def test_pagination_invalid_is_422(probe: TestClient, query: str) -> None:
     response = probe.get(f"/_page?{query}")
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"][0] == "query"
+
+
+def test_pagination_ignores_unknown_params(probe: TestClient) -> None:
+    """Unknown query parameters are ignored (API-wide rule), so filters can sit beside it."""
+    assert probe.get("/_page?limit=5&situacao=x&other=1").json() == {"limit": 5, "offset": 0}
 
 
 def test_cnpj_valid(probe: TestClient) -> None:

@@ -1,5 +1,6 @@
 """Response schemas (LGPD guard, mapping from the marts) and settings."""
 
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -56,7 +57,26 @@ def test_schemas_validate_mart_rows(warehouse: Path) -> None:
     captacao = schemas.CaptacaoMensal.model_validate(payload)
     assert captacao.vl_captc_liquida_mes == captacao.vl_captc_mes - captacao.vl_resg_mes
     page = schemas.Page[schemas.PontoSerie](items=pontos, limit=10, offset=0, total=2)
-    assert page.model_dump(mode="json")["items"][1]["vl_patrim_liq"] == "110.00"
+    dumped = page.model_dump(mode="json")["items"][1]
+    assert dumped["vl_patrim_liq"] == 110.0
+    assert isinstance(dumped["vl_quota"], float)
+    assert page.model_dump()["items"][1]["vl_patrim_liq"] == Decimal("110.00")
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("1500.25", 1500.25), ("1500.255", 1500.26), ("0.125", 0.12), ("-30", -30.0)],
+)
+def test_amounts_serialized_as_numbers_with_2_decimals(value: str, expected: float) -> None:
+    ponto = schemas.PontoSerie(
+        sk_data=date(2026, 9, 1),
+        vl_quota=Decimal("1.123456789012"),
+        vl_captc_liquida_dia=Decimal(value),
+    )
+    dumped = ponto.model_dump(mode="json")
+    assert dumped["vl_captc_liquida_dia"] == expected
+    assert dumped["vl_quota"] == 1.123456789012  # share value: not rounded
+    assert ponto.model_dump()["vl_captc_liquida_dia"] == Decimal(value)  # exact internally
 
 
 def test_schemas_reject_unknown_fields_and_bad_cnpj() -> None:
@@ -68,6 +88,7 @@ def test_schemas_reject_unknown_fields_and_bad_cnpj() -> None:
             tp_registro="CLASSE",
             nm_denominacao_social="X",
             sit_fundo_classe="EM FUNCIONAMENTO NORMAL",
+            fl_informa_recente=False,
         )
 
 

@@ -24,7 +24,8 @@ create table marts.dim_fundo (
     tp_classe varchar, sit_fundo_classe varchar, sit_fundo varchar, tp_classificacao varchar,
     tp_classificacao_anbima varchar, tp_condominio varchar, tp_publico_alvo varchar,
     fl_exclusivo boolean, cnpj_administrador varchar, nm_administrador varchar,
-    cpf_cnpj_gestor varchar, nm_gestor varchar, dt_registro date, dt_valido_de date,
+    cpf_cnpj_gestor varchar, nm_gestor varchar, dt_registro date,
+    fl_informa_recente boolean not null default false, dt_valido_de date,
     dt_valido_ate date, fl_versao_atual boolean
 );
 create table marts.fct_informe_diario (
@@ -47,7 +48,7 @@ insert into marts.dim_fundo values
     ('sk1', '{CNPJ_CLASSE}', 'CLASSE', '10', '1', '{CNPJ_FUNDO}', 'CLASSE TESTE', 'FUNDO TESTE',
      'FIF', 'Classes de Cotas', 'EM FUNCIONAMENTO NORMAL', 'EM FUNCIONAMENTO NORMAL', 'Renda Fixa',
      null, 'ABERTO', 'GERAL', false, '{CNPJ_FUNDO}', 'ADMINISTRADORA TESTE', null, null,
-     '2020-01-02', '1900-01-01', null, true);
+     '2020-01-02', true, '1900-01-01', null, true);
 insert into marts.fct_informe_diario values
     ('sk1', '2026-08-31', '{CNPJ_CLASSE}', null, 100, 1.5, 100, 10, 2, 8, 3, '2026-08-01',
      '2026-09-01 00:00:00'),

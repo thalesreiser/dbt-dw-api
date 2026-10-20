@@ -9,6 +9,11 @@
 --   is the half-open interval [dt_valido_de, dt_valido_ate).
 -- * Several versions opened on the same day collapse into the last one of that day, so
 --   (cnpj_fundo_classe, dt_valido_de) and sk_fundo stay unique.
+--
+-- fl_informa_recente: the CNPJ has at least one daily report in the latest reference month
+-- loaded. Computed from stg_cvm__informe_diario (the same rows fct_informe_diario holds), since
+-- the fact depends on this dimension; same value on every version of a CNPJ, false for the
+-- unknown member.
 
 with registro_snapshot as (
 
@@ -75,6 +80,23 @@ desconhecido as (
 
 ),
 
+mes_recente as (
+
+    select max(dt_mes_competencia) as dt_mes_competencia
+    from {{ ref('stg_cvm__informe_diario') }}
+
+),
+
+cnpjs_recentes as (
+
+    select distinct i.cnpj_fundo_classe
+    from {{ ref('stg_cvm__informe_diario') }} as i
+    inner join mes_recente as m
+        on i.dt_mes_competencia = m.dt_mes_competencia
+    where i.cnpj_fundo_classe is not null
+
+),
+
 unioned as (
 
     select * from versoes
@@ -84,8 +106,8 @@ unioned as (
 )
 
 select
-    {{ dbt_utils.generate_surrogate_key(['cnpj_fundo_classe', 'dt_valido_de']) }} as sk_fundo,
-    cnpj_fundo_classe,
+    {{ dbt_utils.generate_surrogate_key(['u.cnpj_fundo_classe', 'u.dt_valido_de']) }} as sk_fundo,
+    u.cnpj_fundo_classe,
     tp_registro,
     id_registro_classe,
     id_registro_fundo,
@@ -106,7 +128,11 @@ select
     cpf_cnpj_gestor,
     nm_gestor,
     dt_registro,
+    u.tp_registro <> 'DESCONHECIDO'
+        and r.cnpj_fundo_classe is not null as fl_informa_recente,
     dt_valido_de,
     dt_valido_ate,
     fl_versao_atual
-from unioned
+from unioned as u
+left join cnpjs_recentes as r
+    on u.cnpj_fundo_classe = r.cnpj_fundo_classe

@@ -6,16 +6,39 @@ columns of `dim_fundo` (`cpf_cnpj_gestor`, `nm_gestor`), which may identify an i
 are not exposed, and neither is any shareholder data (only the aggregate count `nr_cotst`).
 `tests/test_schemas.py` guards this rule.
 
-Amounts are `Decimal` (exact, as stored in DuckDB) and are serialized as JSON strings.
+Number format: values are `Decimal` internally (exact, as stored in DuckDB) and JSON numbers
+on the wire. Monetary amounts (`Valor`) are rounded to 2 decimal places (`1500.25`); the share
+value `vl_quota` (`Quota`, a unit price with up to 12 decimals) is not rounded and keeps the
+precision of a JSON number (an IEEE 754 double, 15-17 significant digits). Counts are integers.
 """
 
 from datetime import date
-from decimal import Decimal
-from typing import Generic, Literal, TypeVar
+from decimal import ROUND_HALF_EVEN, Decimal
+from typing import Annotated, Generic, Literal, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
 
 T = TypeVar("T")
+
+_CENTAVOS = Decimal("0.01")
+
+
+def _valor_json(value: Decimal) -> float:
+    return float(value.quantize(_CENTAVOS, rounding=ROUND_HALF_EVEN))
+
+
+# Monetary amount: JSON number rounded to 2 decimal places.
+Valor = Annotated[
+    Decimal,
+    PlainSerializer(_valor_json, return_type=float, when_used="json"),
+    Field(description="Amount in BRL, JSON number rounded to 2 decimal places."),
+]
+# Share value (unit price, up to 12 decimals): JSON number, not rounded.
+Quota = Annotated[
+    Decimal,
+    PlainSerializer(float, return_type=float, when_used="json"),
+    Field(description="Share value, JSON number not rounded (up to 12 decimal places)."),
+]
 
 
 class _Model(BaseModel):
@@ -58,6 +81,10 @@ class FundoResumo(_Model):
     cnpj_administrador: str | None = None
     nm_administrador: str | None = None
     dt_registro: date | None = None
+    fl_informa_recente: bool = Field(
+        description="The CNPJ has a daily report in the latest reference month loaded "
+        "(e.g. a `CANCELADO` fund that still reports)."
+    )
 
 
 class PontoSerie(_Model):
@@ -65,12 +92,12 @@ class PontoSerie(_Model):
 
     sk_data: date
     id_subclasse: str | None = None
-    vl_quota: Decimal | None = None
-    vl_patrim_liq: Decimal | None = None
-    vl_total: Decimal | None = None
-    vl_captc_dia: Decimal | None = None
-    vl_resg_dia: Decimal | None = None
-    vl_captc_liquida_dia: Decimal
+    vl_quota: Quota | None = None
+    vl_patrim_liq: Valor | None = None
+    vl_total: Valor | None = None
+    vl_captc_dia: Valor | None = None
+    vl_resg_dia: Valor | None = None
+    vl_captc_liquida_dia: Valor
     nr_cotst: int | None = None
 
 
@@ -80,10 +107,10 @@ class CaptacaoMensal(_Model):
     cnpj_fundo_classe: str = Field(pattern=r"^\d{14}$")
     nm_denominacao_social: str | None = None
     sk_mes: date
-    vl_captc_mes: Decimal
-    vl_resg_mes: Decimal
-    vl_captc_liquida_mes: Decimal
-    vl_patrim_liq_fim_mes: Decimal | None = None
+    vl_captc_mes: Valor
+    vl_resg_mes: Valor
+    vl_captc_liquida_mes: Valor
+    vl_patrim_liq_fim_mes: Valor | None = None
     nr_cotst_fim_mes: int | None = None
     nr_dias_informados: int
 
@@ -100,7 +127,9 @@ class Page(_Model, Generic[T]):
 class SerieFundo(_Model):
     """Daily series of one fund/class over a period (RF-08), ordered by `sk_data` ascending.
 
-    Class-level points: subclass rows are rolled up into their class, so `id_subclasse` is null.
+    Default: class-level points (subclass rows rolled up into their class, `id_subclasse`
+    null). With `por_subclasse=true`: one point per subclass per day, ordered by date and
+    subclass, each with its own `vl_quota` and `id_subclasse`.
     """
 
     cnpj_fundo_classe: str = Field(pattern=r"^\d{14}$")

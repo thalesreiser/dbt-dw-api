@@ -26,6 +26,8 @@ models:
           expression: "dt_valido_ate is null or dt_valido_ate > dt_valido_de"
       - dbt_utils.expression_is_true:
           expression: "(tp_registro = 'CLASSE') = (id_registro_classe is not null)"
+      - dbt_utils.expression_is_true:
+          expression: "tp_registro <> 'DESCONHECIDO' or not fl_informa_recente"
     columns:
       - name: sk_fundo
         description: >
@@ -90,6 +92,17 @@ models:
         description: Name of the fund manager (first manager, ADR 006).
       - name: dt_registro
         description: Registration date at CVM of the kept registry entry (class, else fund).
+      - name: fl_informa_recente
+        description: >
+          True when the CNPJ has at least one daily report in the latest reference month loaded
+          (`max(dt_mes_competencia)` of `stg_cvm__informe_diario`, the rows of
+          `fct_informe_diario`); same value on every version of the CNPJ, false for the unknown
+          member. Tells apart a `CANCELADO` fund that still reports.
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+              quote: false
       - name: dt_valido_de
         description: "{{ doc('dt_valido_de') }}"
         tests: [not_null]

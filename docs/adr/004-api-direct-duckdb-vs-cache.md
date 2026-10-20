@@ -36,6 +36,12 @@ missing, which would hide a misconfiguration.
   natural person: the manager columns of `dim_fundo` (`cpf_cnpj_gestor`, `nm_gestor`), which
   may identify an individual, are not exposed, and there is no shareholder data besides the
   aggregate count `nr_cotst`. A test guards the response models.
+- **Number format** (2026-10-20): values are `Decimal` inside the API and JSON numbers on the
+  wire. Monetary amounts are rounded to 2 decimal places (`1500.25`); the share value
+  `vl_quota` (up to 12 decimals) is not rounded, within the precision of a JSON number
+  (IEEE 754 double); counts are integers. Reusable `Valor`/`Quota` types in
+  `src/fundos_api/schemas.py`. Unknown query parameters are ignored, so the shared pagination
+  dependency (`limit`/`offset`) combines with any filter.
 
 ## Alternatives considered
 

@@ -25,6 +25,7 @@ def _cnpj(base: str) -> str:
 CNPJ_FIDC = _cnpj("223334440001")
 CNPJ_LIQ = _cnpj("334445550001")
 CNPJ_CANCELADO = _cnpj("445556660001")
+CNPJ_CANCELADO_INATIVO = _cnpj("556667770001")
 
 
 def _row(
@@ -36,6 +37,7 @@ def _row(
     situacao: str,
     atual: bool = True,
     valido_de: str = "1900-01-01",
+    informa: bool = False,
 ) -> str:
     def q(value: str | None) -> str:
         return "null" if value is None else f"'{value}'"
@@ -44,7 +46,7 @@ def _row(
     return (
         f"('sk_{cnpj}_{valido_de}', '{cnpj}', '{tp_registro}', null, null, null, '{nome}', null, "
         f"{q(tp_fundo)}, {q(tp_classe)}, '{situacao}', '{situacao}', null, null, null, null, "
-        f"null, null, null, null, null, null, '{valido_de}', "
+        f"null, null, null, null, null, null, {str(informa).lower()}, '{valido_de}', "
         f"{valido_ate}, {str(atual).lower()})"
     )
 
@@ -70,9 +72,18 @@ EXTRA_ROWS = [
         "EM FUNCIONAMENTO NORMAL",
     ),
     _row(CNPJ_LIQ, "CLASSE", "CLASSE EM LIQUIDACAO", "FIF", "Classes de Cotas", "EM LIQUIDACAO"),
-    _row(CNPJ_CANCELADO, "FUNDO", "FUNDO CANCELADO QUE INFORMA", "FI", None, "CANCELADO"),
+    _row(
+        CNPJ_CANCELADO,
+        "FUNDO",
+        "FUNDO CANCELADO QUE INFORMA",
+        "FI",
+        None,
+        "CANCELADO",
+        informa=True,
+    ),
+    _row(CNPJ_CANCELADO_INATIVO, "FUNDO", "FUNDO CANCELADO SEM INFORME", "FI", None, "CANCELADO"),
 ]
-CURRENT = sorted([CNPJ_CLASSE, CNPJ_FIDC, CNPJ_LIQ, CNPJ_CANCELADO])
+CURRENT = sorted([CNPJ_CLASSE, CNPJ_FIDC, CNPJ_LIQ, CNPJ_CANCELADO, CNPJ_CANCELADO_INATIVO])
 
 
 @pytest.fixture
@@ -99,12 +110,13 @@ def _cnpjs(body: dict[str, Any]) -> list[str]:
 def test_lists_current_versions_without_unknown_member_by_cnpj(fundos_client: TestClient) -> None:
     body = _get(fundos_client)
     assert _cnpjs(body) == CURRENT
-    assert body["total"] == 4
+    assert body["total"] == 5
     assert body["limit"] == 50
     assert body["offset"] == 0
     classe = next(i for i in body["items"] if i["cnpj_fundo_classe"] == CNPJ_CLASSE)
     assert classe["nm_denominacao_social"] == "CLASSE TESTE"
     assert classe["sit_fundo_classe"] == "EM FUNCIONAMENTO NORMAL"
+    assert classe["fl_informa_recente"] is True
 
 
 @pytest.mark.parametrize("situacao", ["EM FUNCIONAMENTO NORMAL", "em funcionamento normal"])
@@ -117,8 +129,32 @@ def test_filter_by_status_is_case_insensitive(fundos_client: TestClient, situaca
 
 def test_cancelled_fund_that_reports_is_listed_as_cancelled(fundos_client: TestClient) -> None:
     body = _get(fundos_client, situacao="CANCELADO")
+    assert _cnpjs(body) == sorted([CNPJ_CANCELADO, CNPJ_CANCELADO_INATIVO])
+    assert {i["tp_registro"] for i in body["items"]} == {"FUNDO"}
+
+
+def test_filter_cancelled_that_still_report(fundos_client: TestClient) -> None:
+    body = _get(fundos_client, situacao="CANCELADO", informa_recente="true")
     assert _cnpjs(body) == [CNPJ_CANCELADO]
-    assert body["items"][0]["tp_registro"] == "FUNDO"
+    assert body["items"][0]["fl_informa_recente"] is True
+    quiet = _get(fundos_client, situacao="CANCELADO", informa_recente="false")
+    assert _cnpjs(quiet) == [CNPJ_CANCELADO_INATIVO]
+    assert _cnpjs(_get(fundos_client, informa_recente="true")) == sorted(
+        [CNPJ_CLASSE, CNPJ_CANCELADO]
+    )
+
+
+def test_filters_combine_with_pagination_and_ignore_unknown_params(
+    fundos_client: TestClient,
+) -> None:
+    first = _get(fundos_client, tp_fundo="FIF", informa_recente="false", limit=1, unknown="x")
+    second = _get(fundos_client, tp_fundo="FIF", informa_recente="false", limit=1, offset=1)
+    assert _cnpjs(first) == [CNPJ_LIQ]
+    assert second["items"] == []
+    assert first["total"] == second["total"] == 1
+    everything = _get(fundos_client, situacao="CANCELADO", limit=1, offset=1)
+    assert _cnpjs(everything) == sorted([CNPJ_CANCELADO, CNPJ_CANCELADO_INATIVO])[1:]
+    assert everything["total"] == 2
 
 
 def test_old_version_status_does_not_match(fundos_client: TestClient) -> None:
@@ -143,8 +179,8 @@ def test_pagination_pages_and_total(fundos_client: TestClient) -> None:
     second = _get(fundos_client, limit=2, offset=2)
     beyond = _get(fundos_client, limit=2, offset=10)
     assert _cnpjs(first) == CURRENT[:2]
-    assert _cnpjs(second) == CURRENT[2:]
-    assert first["total"] == second["total"] == beyond["total"] == 4
+    assert _cnpjs(second) == CURRENT[2:4]
+    assert first["total"] == second["total"] == beyond["total"] == 5
     assert beyond["items"] == []
     assert (second["limit"], second["offset"]) == (2, 2)
 
@@ -160,6 +196,8 @@ def test_pagination_pages_and_total(fundos_client: TestClient) -> None:
         {"limit": 0},
         {"limit": 501},
         {"offset": -1},
+        {"informa_recente": "maybe"},
+        {"situacao": "CANCELADO", "limit": "abc"},
     ],
 )
 def test_invalid_input_is_422(fundos_client: TestClient, params: dict[str, Any]) -> None:
@@ -200,6 +238,14 @@ def test_read_only_warehouse_unchanged(fundos_client: TestClient, warehouse: Pat
 def test_openapi_documents_filters_without_personal_data(fundos_client: TestClient) -> None:
     spec = fundos_client.get("/openapi.json").json()
     names = {p["name"] for p in spec["paths"]["/v1/fundos"]["get"]["parameters"]}
-    assert names == {"situacao", "tp_fundo", "tp_classe", "nome", "limit", "offset"}
+    assert names == {
+        "situacao",
+        "tp_fundo",
+        "tp_classe",
+        "nome",
+        "informa_recente",
+        "limit",
+        "offset",
+    }
     fields = spec["components"]["schemas"]["FundoResumo"]["properties"]
     assert not any("cpf" in f or "gestor" in f for f in fields)

@@ -173,6 +173,14 @@ Settings come from the environment or `.env` ([`.env.example`](.env.example)): `
 is missing or cannot be read; file paths are never exposed. Invalid input (a CNPJ that is not
 14 digits, `limit`/`offset` out of bounds) gives **422** before any query runs (RNF-03).
 Responses carry fund and class data only: no CPF and no natural-person names (LGPD).
+Unknown query parameters are ignored (they never cause an error), so filters and pagination
+combine freely.
+
+**Number format.** Monetary amounts (net assets, totals, inflows, redemptions, net inflows)
+are JSON numbers rounded to 2 decimal places (`1500.25`, not `"1500.25"`); they are exact
+`Decimal` values inside the API. The share value `vl_quota` is a unit price with up to 12
+decimals and is a JSON number **not** rounded (`1.234567890123`), within the precision of a
+JSON number (IEEE 754 double, 15-17 significant digits). Counts are integers.
 
 | Method | Route | Description | Req. |
 |---|---|---|---|
@@ -195,22 +203,25 @@ optional, combined with AND, bound parameters only): `situacao` (registry status
 `EM FUNCIONAMENTO NORMAL`, `EM LIQUIDACAO`, `EM SITUACAO ESPECIAL`, `FASE PRE-OPERACIONAL`,
 `INCORPORACAO`; anything else is **422**), `tp_fundo` (e.g. `FIF`, `FIDC`) and `tp_classe`
 (e.g. `CLASSES DE COTAS DE FUNDOS FIF`), exact and case-insensitive, and `nome` (substring of
-the legal name, at least 3 characters). **Pagination convention for the whole API:**
+the legal name, at least 3 characters) and `informa_recente` (`true`/`false`, the flag
+`fl_informa_recente` of each item: the CNPJ has a daily report in the latest month loaded). **Pagination convention for the whole API:**
 `limit` (default `DEFAULT_PAGE_SIZE`, at most `MAX_PAGE_SIZE`) and `offset`, and list responses
 use the envelope `{"items": [...], "limit": 20, "offset": 0, "total": 1234}` with the total
 number of matching rows. The registry status is shown as published by CVM: the funds that are
 `CANCELADO` in the registry but still report (233 in 2026-09) are listed with
-`sit_fundo_classe = "CANCELADO"` and returned by `situacao=CANCELADO`; no "still reports" flag
-yet (the daily series of RF-08 shows their activity).
+`sit_fundo_classe = "CANCELADO"`, and `situacao=CANCELADO&informa_recente=true` lists exactly
+them.
 
 `GET /v1/fundos/{cnpj}/serie` (RF-08) returns the daily points of a fund/class ordered by date
 ascending: `{"cnpj_fundo_classe": ..., "inicio": "2025-09-02", "fim": "2026-09-01", "items":
-[{"sk_data": "2026-09-01", "vl_quota": "1.600000000000", "vl_patrim_liq": "110.00", ...}]}`.
+[{"sk_data": "2026-09-01", "vl_quota": 1.6, "vl_patrim_liq": 110.0, ...}]}`.
 `inicio` and `fim` (ISO dates, inclusive) are optional: `fim` defaults to the latest reported day
 of the CNPJ and `inicio` to 12 months before it; `inicio > fim` or a period above 1,830 days
 (about five years) gives **422**. Points are at class level: subclass rows are summed into their
 class as in `fct_captacao_mensal` (`vl_quota` is null on a day with more than one subclass and
-`id_subclasse` is always null). A CNPJ absent from `dim_fundo` (any version) gives **404**; a
+`id_subclasse` is null). With `por_subclasse=true` the series has one point per subclass per
+day, ordered by date and subclass, each with its own `vl_quota` and `id_subclasse` (null for a
+class without subclasses). A CNPJ absent from `dim_fundo` (any version) gives **404**; a
 known CNPJ without reports in the period gives **200** with `"items": []`.
 
 **`GET /v1/rankings/captacao`** (RF-09) ranks the funds/classes of a month by net inflows
@@ -219,15 +230,16 @@ known CNPJ without reports in the period gives **200** with `"items": []`.
 (`desc` = largest net inflows first, default; `asc` = largest net outflows first). Ties are
 broken by CNPJ (ascending). Each item has `posicao`, `cnpj_fundo_classe`, the name from the
 current `dim_fundo` version, `vl_captc_liquida_mes`, `vl_captc_mes`, `vl_resg_mes`,
-`vl_patrim_liq_fim_mes`, `nr_cotst_fim_mes` and `nr_dias_informados`; amounts are decimal
-strings. A month without data gives **404** (`{"detail": "no data for month 2026-07"}`); an
+`vl_patrim_liq_fim_mes`, `nr_cotst_fim_mes` and `nr_dias_informados`; amounts are JSON
+numbers with 2 decimal places. A month without data (explicit `mes` not loaded, or an empty
+warehouse) gives **404** (`{"detail": "no data for month 2026-07"}`); an
 invalid `mes`, `top` or `ordem` gives **422**.
 
 ```json
 {"sk_mes": "2026-09-01", "ordem": "desc", "top": 10, "items": [
   {"posicao": 1, "cnpj_fundo_classe": "<CNPJ>", "nm_denominacao_social": "<name>",
-   "sk_mes": "2026-09-01", "vl_captc_mes": "20.50", "vl_resg_mes": "0.50",
-   "vl_captc_liquida_mes": "20.00", "vl_patrim_liq_fim_mes": "1000.10",
+   "sk_mes": "2026-09-01", "vl_captc_mes": 20.5, "vl_resg_mes": 0.5,
+   "vl_captc_liquida_mes": 20.0, "vl_patrim_liq_fim_mes": 1000.1,
    "nr_cotst_fim_mes": 7, "nr_dias_informados": 21}]}
 ```
 
