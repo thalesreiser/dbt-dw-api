@@ -91,18 +91,12 @@ models:
       - name: dt_registro
         description: Registration date at CVM of the kept registry entry (class, else fund).
       - name: dt_valido_de
-        description: >
-          Start of the version (inclusive): date of the snapshot's `dbt_valid_from`. The first
-          version of every CNPJ starts at 1900-01-01 (no registry history before the first
-          snapshot), so older facts resolve to the oldest known version.
+        description: "{{ doc('dt_valido_de') }}"
         tests: [not_null]
       - name: dt_valido_ate
-        description: >
-          End of the version (exclusive): date of the snapshot's `dbt_valid_to`, equal to the
-          `dt_valido_de` of the next version; null for the current version. Validity is
-          [`dt_valido_de`, `dt_valido_ate`).
+        description: "{{ doc('dt_valido_ate') }}"
       - name: fl_versao_atual
-        description: True for the current version of the CNPJ (`dbt_valid_to` is null); exactly one per CNPJ.
+        description: "{{ doc('fl_versao_atual') }}"
         tests: [not_null]
 
   - name: dim_data
@@ -114,7 +108,7 @@ models:
       points `sk_mes` to the first day of the month in this same dimension.
     columns:
       - name: sk_data
-        description: The calendar date (surrogate key of type `date`, naming-conventions.md).
+        description: "{{ doc('sk_data') }}"
         tests: [not_null, unique]
       - name: sk_mes
         description: First day of the month of `sk_data`; the key `fct_captacao_mensal.sk_mes` uses.
@@ -179,9 +173,7 @@ models:
           expression: "dt_mes_competencia = date_trunc('month', sk_data)"
     columns:
       - name: sk_fundo
-        description: >
-          FK to `dim_fundo`: the version with the same `cnpj_fundo_classe` and `sk_data` in
-          [`dt_valido_de`, `dt_valido_ate`); the unknown member when there is none.
+        description: "{{ doc('sk_fundo_fk') }} Here the fact date is `sk_data`."
         tests:
           - not_null
           - relationships:
@@ -195,7 +187,7 @@ models:
               to: ref('dim_data')
               field: sk_data
       - name: cnpj_fundo_classe
-        description: Degenerate natural key; reporting CNPJ (class CNPJ, else fund CNPJ).
+        description: "Degenerate natural key. {{ doc('cnpj_fundo_classe') }}"
         tests: [not_null, valid_cnpj]
       - name: id_subclasse
         description: Degenerate dimension; subclass id, null when the report is at class level.
@@ -210,7 +202,7 @@ models:
       - name: vl_resg_dia
         description: Redemptions of the day (BRL); additive.
       - name: vl_captc_liquida_dia
-        description: "Net inflows of the day (RN-01): `vl_captc_dia - vl_resg_dia`, a missing side as zero; additive."
+        description: "Net inflows of the day (BRL): `vl_captc_dia - vl_resg_dia`. {{ doc('rn_01_captacao_liquida') }}"
         tests: [not_null]
       - name: nr_cotst
         description: Number of shareholders; semi-additive (may count an investor more than once across classes).
@@ -218,7 +210,7 @@ models:
         description: Reference month (first day); the unit the incremental run replaces.
         tests: [not_null]
       - name: _loaded_at
-        description: Load timestamp of the month in the raw layer; drives the incremental filter.
+        description: "{{ doc('_loaded_at') }}"
         tests: [not_null]
 
   - name: fct_captacao_mensal
@@ -250,7 +242,7 @@ models:
               to: ref('dim_data')
               field: sk_data
       - name: cnpj_fundo_classe
-        description: Degenerate natural key; reporting CNPJ.
+        description: "Degenerate natural key. {{ doc('cnpj_fundo_classe') }}"
         tests: [not_null]
       - name: vl_captc_mes
         description: Inflows of the month (BRL), sum of the daily values; additive.
@@ -259,7 +251,7 @@ models:
         description: Redemptions of the month (BRL), sum of the daily values; additive.
         tests: [not_null]
       - name: vl_captc_liquida_mes
-        description: "Net inflows of the month (RN-01): `vl_captc_mes - vl_resg_mes`; RF-09 ranks by it."
+        description: "Net inflows of the month (BRL): `vl_captc_mes - vl_resg_mes`. {{ doc('rn_01_captacao_liquida') }}"
         tests: [not_null]
       - name: vl_patrim_liq_fim_mes
         description: Net assets on the last reported day of the month (subclasses summed); semi-additive.

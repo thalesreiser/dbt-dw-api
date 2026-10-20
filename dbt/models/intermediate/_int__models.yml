@@ -19,7 +19,7 @@ models:
           expression: "(tp_registro = 'CLASSE') = (id_registro_classe is not null)"
     columns:
       - name: cnpj_fundo_classe
-        description: Reporting CNPJ (class CNPJ, else fund CNPJ); natural key.
+        description: "{{ doc('cnpj_fundo_classe') }}"
         tests: [not_null, unique, valid_cnpj]
       - name: tp_registro
         description: "`CLASSE` or `FUNDO`: which registry the row comes from."
