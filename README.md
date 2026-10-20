@@ -1,6 +1,7 @@
 # dbt-dw-api
 
 [![CI](https://github.com/thalesreiser/dbt-dw-api/actions/workflows/ci.yml/badge.svg)](https://github.com/thalesreiser/dbt-dw-api/actions/workflows/ci.yml)
+[![dbt docs](https://img.shields.io/badge/dbt_docs-GitHub_Pages-FF694B?logo=dbt&logoColor=white)](https://thalesreiser.github.io/dbt-dw-api/)
 ![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
 ![dbt](https://img.shields.io/badge/dbt-1.8-FF694B?logo=dbt&logoColor=white)
 ![DuckDB](https://img.shields.io/badge/DuckDB-1.1-FFF000?logo=duckdb&logoColor=black)
@@ -324,7 +325,9 @@ Every model, snapshot, seed and column is described in the `*.yml` files; repeat
 (`cnpj_fundo_classe`, SCD2 validity, RN-01) are `{% docs %}` blocks in `dbt/models/docs.md`, and
 the API is the exposure `fundos_api`. The lineage is summarized in
 [docs/dimensional-model.md](docs/dimensional-model.md#lineage). CI uploads the generated docs as
-the artifact `dbt-docs` of the `sources` job (publication on GitHub Pages: task 7.3).
+the artifact `dbt-docs` of the `sources` job, and the workflow
+[`docs.yml`](.github/workflows/docs.yml) publishes them on every push to `main` that touches `dbt/`
+or the loader: **https://thalesreiser.github.io/dbt-dw-api/** (task 7.3).
 
 ## Repository layout
 
@@ -374,6 +377,7 @@ the artifact `dbt-docs` of the `sources` job (publication on GitHub Pages: task 
 | [04 - Architecture](docs/04-architecture.md) | Simplified C4 |
 | [05 - Validation](docs/05-validation.md) | Acceptance criteria execution |
 | [06 - Traceability](docs/06-traceability.md) | Requirement → component → test |
+| [dbt docs](https://thalesreiser.github.io/dbt-dw-api/) | Published dbt documentation and lineage graph, sources to the `fundos_api` exposure (RF-06) |
 | [Data source](docs/data-source.md) | CVM files, layouts, encoding and key mapping (RF-01) |
 | [Naming conventions](docs/naming-conventions.md) | Layers, model names, column prefixes and types (RNF-05) |
 | [Testing](docs/testing.md) | Negative suites: invalid data -> failing tests (RF-05) |
