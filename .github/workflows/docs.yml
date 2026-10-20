@@ -1,0 +1,69 @@
+name: dbt docs
+# RF-06 (task 7.3): publish the dbt documentation and lineage on GitHub Pages
+# (https://thalesreiser.github.io/dbt-dw-api/). The warehouse is built on the real CVM months so the
+# catalog has the real column types; only one self-contained HTML file is published (no data,
+# no .duckdb, no secrets). Pull requests that change this workflow only build the site (no deploy).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "dbt/**"
+      - "scripts/direct_load.py"
+      - "src/fundos_api/ingestion.py"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DUCKDB_PATH: data/warehouse.duckdb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dbt]"
+      - name: Load the two previous reference months from CVM
+        run: make load COMPETENCIAS=2
+      - name: dbt build (models, snapshot, seeds and tests)
+        run: make build
+      # --static embeds manifest.json and catalog.json into a single static_index.html.
+      - name: dbt docs generate
+        run: dbt docs generate --static --project-dir dbt --profiles-dir dbt
+      - name: Documentation coverage
+        run: make docs-coverage
+      # The Pages artifact holds only the generated page: nothing else from dbt/target or data/.
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp dbt/target/static_index.html _site/index.html
+          touch _site/.nojekyll
+          ls -la _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
