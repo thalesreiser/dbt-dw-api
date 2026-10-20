@@ -181,12 +181,27 @@ Responses carry fund and class data only: no CPF and no natural-person names (LG
 | GET | `/v1/rankings/captacao` | Top N funds by net inflows in the month | RF-09 |
 
 ```bash
-curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos?situacao=EM%20FUNCIONAMENTO&page=1&size=20"
+curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos?situacao=em%20funcionamento%20normal&tp_fundo=FIF&limit=20&offset=0"
 curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos/<FUND_CNPJ>/serie?inicio=2026-01-01&fim=2026-09-30"
 curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/rankings/captacao?mes=2026-09&top=10"
 ```
 
 Without the key the API returns **401**; above the rate limit, **429** (RF-10).
+
+**`GET /v1/fundos` (RF-07).** Current version of each fund/class in `dim_fundo`
+(`fl_versao_atual`), without the unknown member, ordered by `cnpj_fundo_classe`. Filters (all
+optional, combined with AND, bound parameters only): `situacao` (registry status
+`sit_fundo_classe`, case-insensitive, one of `CANCELADO`, `EM ANALISE`,
+`EM FUNCIONAMENTO NORMAL`, `EM LIQUIDACAO`, `EM SITUACAO ESPECIAL`, `FASE PRE-OPERACIONAL`,
+`INCORPORACAO`; anything else is **422**), `tp_fundo` (e.g. `FIF`, `FIDC`) and `tp_classe`
+(e.g. `CLASSES DE COTAS DE FUNDOS FIF`), exact and case-insensitive, and `nome` (substring of
+the legal name, at least 3 characters). **Pagination convention for the whole API:**
+`limit` (default `DEFAULT_PAGE_SIZE`, at most `MAX_PAGE_SIZE`) and `offset`, and list responses
+use the envelope `{"items": [...], "limit": 20, "offset": 0, "total": 1234}` with the total
+number of matching rows. The registry status is shown as published by CVM: the funds that are
+`CANCELADO` in the registry but still report (233 in 2026-09) are listed with
+`sit_fundo_classe = "CANCELADO"` and returned by `situacao=CANCELADO`; no "still reports" flag
+yet (the daily series of RF-08 shows their activity).
 
 ## Quality at every level
 
