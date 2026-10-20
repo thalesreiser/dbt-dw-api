@@ -70,23 +70,23 @@ def test_default_month_is_latest_and_ordered_desc(rk: TestClient) -> None:
     assert [i["posicao"] for i in body["items"]] == [1, 2, 3, 4]
 
 
-def test_item_fields_current_name_and_decimal_strings(rk: TestClient) -> None:
+def test_item_fields_current_name_and_json_numbers(rk: TestClient) -> None:
     first, _, third, last = rk.get(URL, params={"mes": "2026-09"}).json()["items"]
     assert first == {
         "posicao": 1,
         "cnpj_fundo_classe": CNPJ_A,
         "nm_denominacao_social": "CLASSE A",  # current dim_fundo version, not the fact's
         "sk_mes": "2026-09-01",
-        "vl_captc_mes": "20.50",
-        "vl_resg_mes": "0.50",
-        "vl_captc_liquida_mes": "20.00",
-        "vl_patrim_liq_fim_mes": "1000.10",
+        "vl_captc_mes": 20.5,
+        "vl_resg_mes": 0.5,
+        "vl_captc_liquida_mes": 20.0,
+        "vl_patrim_liq_fim_mes": 1000.1,
         "nr_cotst_fim_mes": 7,
         "nr_dias_informados": 21,
     }
     assert third["vl_patrim_liq_fim_mes"] is None
     assert last["nm_denominacao_social"] is None  # no dim_fundo row
-    assert last["vl_captc_liquida_mes"] == "-30.00"
+    assert last["vl_captc_liquida_mes"] == -30.0
 
 
 def test_ordem_asc_lists_largest_outflows_first(rk: TestClient) -> None:

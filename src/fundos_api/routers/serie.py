@@ -1,10 +1,12 @@
 """`GET /v1/fundos/{cnpj}/serie` (RF-08): daily series of one fund/class over a period.
 
-Grain: one point per day at class level. Subclass rows of `fct_informe_diario` are rolled up
-into their class, as in `fct_captacao_mensal` (ADR 006: a CNPJ never reports at class level and
-per subclass on the same day): amounts, flows and `nr_cotst` are summed; `vl_quota` is kept
-only when the day has a single row, since share values of different subclasses cannot be added.
-`id_subclasse` is therefore always null in this endpoint.
+Grain (default): one point per day at class level. Subclass rows of `fct_informe_diario` are
+rolled up into their class, as in `fct_captacao_mensal` (ADR 006: a CNPJ never reports at class
+level and per subclass on the same day): amounts, flows and `nr_cotst` are summed; `vl_quota`
+is kept only when the day has a single row, since share values of different subclasses cannot
+be added, and `id_subclasse` is null. With `por_subclasse=true` the grain is the fact's: one
+point per subclass per day, ordered by (date, subclass), each with its own `vl_quota` and
+`id_subclasse` (null for a class that reports without subclasses).
 
 Period: `inicio` and `fim` are optional. `fim` defaults to the latest reported day of the CNPJ
 (or `inicio`, if later) and `inicio` to 12 months before `fim`. The range is inclusive, ordered
@@ -46,6 +48,15 @@ from {schema}.fct_informe_diario
 where cnpj_fundo_classe = ? and sk_data between ? and ?
 group by sk_data
 order by sk_data
+"""
+
+_SERIE_SUBCLASSE_SQL = """
+select
+    sk_data, id_subclasse, vl_total, vl_quota, vl_patrim_liq, vl_captc_dia, vl_resg_dia,
+    vl_captc_liquida_dia, nr_cotst
+from {schema}.fct_informe_diario
+where cnpj_fundo_classe = ? and sk_data between ? and ?
+order by sk_data, id_subclasse nulls first
 """
 
 
@@ -96,6 +107,14 @@ def serie_fundo(
         date | None,
         Query(description="Last day (inclusive). Default: latest reported day of the CNPJ."),
     ] = None,
+    por_subclasse: Annotated[
+        bool,
+        Query(
+            description="`true`: one point per subclass per day, each with its own `vl_quota` "
+            "and `id_subclasse`. Default: class-level points (amounts summed, `vl_quota` null "
+            "on days with more than one subclass)."
+        ),
+    ] = False,
 ) -> SerieFundo:
     """Daily series (share value, net assets, flows) of a fund/class, ordered by date."""
     if inicio is not None and fim is not None:
@@ -118,6 +137,7 @@ def serie_fundo(
     if inicio is None:
         inicio = default_inicio(fim)
     _check_period(inicio, fim)
-    cursor = con.execute(_SERIE_SQL.format(schema=schema), [cnpj, inicio, fim])
+    sql = _SERIE_SUBCLASSE_SQL if por_subclasse else _SERIE_SQL
+    cursor = con.execute(sql.format(schema=schema), [cnpj, inicio, fim])
     items = [PontoSerie(**row) for row in _rows(cursor)]
     return SerieFundo(cnpj_fundo_classe=cnpj, inicio=inicio, fim=fim, items=items)

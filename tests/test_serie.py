@@ -55,7 +55,7 @@ def _url(cnpj: str) -> str:
     return f"/v1/fundos/{cnpj}/serie"
 
 
-def test_series_ordered_with_decimal_strings(client: TestClient) -> None:
+def test_series_ordered_with_json_numbers(client: TestClient) -> None:
     response = client.get(_url(CNPJ_CLASSE), params={"inicio": "2026-08-01", "fim": "2026-09-30"})
     assert response.status_code == 200
     body = response.json()
@@ -63,10 +63,11 @@ def test_series_ordered_with_decimal_strings(client: TestClient) -> None:
     assert (body["inicio"], body["fim"]) == ("2026-08-01", "2026-09-30")
     assert [p["sk_data"] for p in body["items"]] == ["2026-08-31", "2026-09-01"]
     first = body["items"][0]
-    # Decimals are exact JSON strings, as in the skeleton's schemas.
-    assert first["vl_patrim_liq"] == "100.00"
-    assert first["vl_quota"] == "1.500000000000"
-    assert first["vl_captc_liquida_dia"] == "8.00"
+    # Amounts and the share value are JSON numbers; counts are integers.
+    assert '"vl_patrim_liq":100.0,' in response.text
+    assert first["vl_patrim_liq"] == 100.0
+    assert first["vl_quota"] == 1.5
+    assert first["vl_captc_liquida_dia"] == 8.0
     assert first["nr_cotst"] == 3
     assert first["id_subclasse"] is None
 
@@ -102,13 +103,62 @@ def test_only_fim(api: TestClient) -> None:
 def test_subclasses_rolled_up_to_class(api: TestClient) -> None:
     body = api.get(_url(CNPJ_SUBCLASSES), params={"inicio": "2026-09-02", "fim": "2026-09-02"})
     (point,) = body.json()["items"]
-    assert point["vl_patrim_liq"] == "150.75"
-    assert point["vl_captc_dia"] == "4.00"
-    assert point["vl_resg_dia"] == "1.00"
-    assert point["vl_captc_liquida_dia"] == "3.00"
+    assert point["vl_patrim_liq"] == 150.75
+    assert point["vl_captc_dia"] == 4.0
+    assert point["vl_resg_dia"] == 1.0
+    assert point["vl_captc_liquida_dia"] == 3.0
     assert point["nr_cotst"] == 7
     assert point["vl_quota"] is None  # share values of two subclasses are not additive
     assert point["id_subclasse"] is None
+
+
+def test_por_subclasse_false_is_the_default(api: TestClient) -> None:
+    params = {"inicio": "2026-08-01", "fim": "2026-09-30"}
+    default = api.get(_url(CNPJ_SUBCLASSES), params=params).json()
+    explicit = api.get(_url(CNPJ_SUBCLASSES), params={**params, "por_subclasse": "false"}).json()
+    assert default == explicit
+    assert [p["sk_data"] for p in default["items"]] == ["2026-08-03", "2026-09-02"]
+
+
+def test_por_subclasse_one_point_per_subclass(api: TestClient) -> None:
+    params = {"inicio": "2026-08-01", "fim": "2026-09-30", "por_subclasse": "true"}
+    items = api.get(_url(CNPJ_SUBCLASSES), params=params).json()["items"]
+    keys = [(p["sk_data"], p["id_subclasse"]) for p in items]
+    assert keys == [("2026-08-03", "A"), ("2026-09-02", "A"), ("2026-09-02", "B")]
+    a, b = items[1], items[2]
+    assert (a["vl_quota"], b["vl_quota"]) == (1.0, 2.0)
+    assert (a["vl_patrim_liq"], b["vl_patrim_liq"]) == (100.25, 50.5)
+    assert (a["nr_cotst"], b["nr_cotst"]) == (5, 2)
+    assert a["vl_captc_liquida_dia"] == 2.0
+
+
+def test_por_subclasse_class_without_subclasses(client: TestClient) -> None:
+    params = {"inicio": "2026-08-01", "fim": "2026-09-30", "por_subclasse": "true"}
+    items = client.get(_url(CNPJ_CLASSE), params=params).json()["items"]
+    assert [(p["sk_data"], p["id_subclasse"], p["vl_quota"]) for p in items] == [
+        ("2026-08-31", None, 1.5),
+        ("2026-09-01", None, 1.6),
+    ]
+
+
+def test_por_subclasse_invalid_is_422(client: TestClient) -> None:
+    response = client.get(_url(CNPJ_CLASSE), params={"por_subclasse": "maybe"})
+    assert response.status_code == 422
+
+
+def test_quota_keeps_twelve_decimals(tmp_path: Path) -> None:
+    path = build_warehouse(tmp_path / "w.duckdb")
+    con = duckdb.connect(str(path))
+    try:
+        con.execute(
+            "update marts.fct_informe_diario set vl_quota = 1.234567890123"
+            " where sk_data = '2026-09-01'"
+        )
+    finally:
+        con.close()
+    app = create_app(Settings(duckdb_path=path, _env_file=None))  # type: ignore[call-arg]
+    response = TestClient(app).get(_url(CNPJ_CLASSE), params={"inicio": "2026-09-01"})
+    assert '"vl_quota":1.234567890123,' in response.text
 
 
 def test_unknown_cnpj_is_404(api: TestClient) -> None:
@@ -200,7 +250,8 @@ def test_months_before_clamps_month_end() -> None:
 def test_openapi_documents_route() -> None:
     spec = create_app(Settings(_env_file=None)).openapi()  # type: ignore[call-arg]
     operation = spec["paths"]["/v1/fundos/{cnpj}/serie"]["get"]
-    assert {p["name"] for p in operation["parameters"]} == {"cnpj", "inicio", "fim"}
+    names = {p["name"] for p in operation["parameters"]}
+    assert names == {"cnpj", "inicio", "fim", "por_subclasse"}
     assert "404" in operation["responses"]
 
 
