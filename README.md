@@ -181,12 +181,27 @@ Responses carry fund and class data only: no CPF and no natural-person names (LG
 | GET | `/v1/rankings/captacao` | Top N funds by net inflows in the month | RF-09 |
 
 ```bash
-curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos?situacao=EM%20FUNCIONAMENTO&page=1&size=20"
+curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos?situacao=em%20funcionamento%20normal&tp_fundo=FIF&limit=20&offset=0"
 curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos/<FUND_CNPJ>/serie?inicio=2026-01-01&fim=2026-09-30"
 curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/rankings/captacao?mes=2026-09&top=10"
 ```
 
 Without the key the API returns **401**; above the rate limit, **429** (RF-10).
+
+**`GET /v1/fundos` (RF-07).** Current version of each fund/class in `dim_fundo`
+(`fl_versao_atual`), without the unknown member, ordered by `cnpj_fundo_classe`. Filters (all
+optional, combined with AND, bound parameters only): `situacao` (registry status
+`sit_fundo_classe`, case-insensitive, one of `CANCELADO`, `EM ANALISE`,
+`EM FUNCIONAMENTO NORMAL`, `EM LIQUIDACAO`, `EM SITUACAO ESPECIAL`, `FASE PRE-OPERACIONAL`,
+`INCORPORACAO`; anything else is **422**), `tp_fundo` (e.g. `FIF`, `FIDC`) and `tp_classe`
+(e.g. `CLASSES DE COTAS DE FUNDOS FIF`), exact and case-insensitive, and `nome` (substring of
+the legal name, at least 3 characters). **Pagination convention for the whole API:**
+`limit` (default `DEFAULT_PAGE_SIZE`, at most `MAX_PAGE_SIZE`) and `offset`, and list responses
+use the envelope `{"items": [...], "limit": 20, "offset": 0, "total": 1234}` with the total
+number of matching rows. The registry status is shown as published by CVM: the funds that are
+`CANCELADO` in the registry but still report (233 in 2026-09) are listed with
+`sit_fundo_classe = "CANCELADO"` and returned by `situacao=CANCELADO`; no "still reports" flag
+yet (the daily series of RF-08 shows their activity).
 
 `GET /v1/fundos/{cnpj}/serie` (RF-08) returns the daily points of a fund/class ordered by date
 ascending: `{"cnpj_fundo_classe": ..., "inicio": "2025-09-02", "fim": "2026-09-01", "items":
@@ -209,6 +224,17 @@ known CNPJ without reports in the period gives **200** with `"items": []`.
 | Performance | **p95 below 300 ms** on time-series queries | locust or hey |
 
 CI fails if any test in `dbt build` fails (RNF-02). There is also a **negative test**: invalid data inserted on purpose must make a test fail, proving that the tests actually work.
+
+**Negative tests (RF-05).** Two suites prove that the tests fail on invalid data:
+
+```bash
+make negative-tests    # 4.1: tamper rows in a copy of the built warehouse (needs `make marts`)
+make negative-fixture  # 4.3: network-free, synthetic seeds; each case fails exactly its tests
+```
+
+The fixture suite covers null and duplicate keys, orphan keys (registry and fact -> dimension),
+RN-01, RN-02 (negative flow, future date, date outside the reference month) and an SCD2 overlap;
+the case -> failing tests table is in [docs/testing.md](docs/testing.md).
 
 ## Stack
 
@@ -320,6 +346,7 @@ the artifact `dbt-docs` of the `sources` job (publication on GitHub Pages: task 
 | [06 - Traceability](docs/06-traceability.md) | Requirement → component → test |
 | [Data source](docs/data-source.md) | CVM files, layouts, encoding and key mapping (RF-01) |
 | [Naming conventions](docs/naming-conventions.md) | Layers, model names, column prefixes and types (RNF-05) |
+| [Testing](docs/testing.md) | Negative suites: invalid data -> failing tests (RF-05) |
 | [Dimensional model](docs/dimensional-model.md) | Star schema, grain of each fact, surrogate keys, class-or-fund resolution (RF-03) |
 | [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175, staging grain and deduplication, registry snapshot |
 
