@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from fundos_api import __version__
 from fundos_api.config import Settings, get_settings
 from fundos_api.db import WarehouseUnavailableError, connect_read_only, get_settings_from_app
+from fundos_api.routers import serie
 from fundos_api.schemas import ErrorResponse, HealthResponse
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return HealthResponse(status="unavailable", database="reachable")
         return HealthResponse(status="ok", database="reachable", latest_month=month)
 
+    app.include_router(serie.router, prefix=app.state.settings.api_prefix)
     return app
 
 

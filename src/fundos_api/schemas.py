@@ -95,3 +95,15 @@ class Page(_Model, Generic[T]):
     limit: int = Field(ge=1)
     offset: int = Field(ge=0)
     total: int = Field(ge=0, description="Total number of matching rows.")
+
+
+class SerieFundo(_Model):
+    """Daily series of one fund/class over a period (RF-08), ordered by `sk_data` ascending.
+
+    Class-level points: subclass rows are rolled up into their class, so `id_subclasse` is null.
+    """
+
+    cnpj_fundo_classe: str = Field(pattern=r"^\d{14}$")
+    inicio: date = Field(description="First day of the period (inclusive).")
+    fim: date = Field(description="Last day of the period (inclusive).")
+    items: list[PontoSerie]
