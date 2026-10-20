@@ -64,8 +64,8 @@ docs-coverage:  ## RF-06: fail if a model, snapshot, seed or exposure, or a colu
 docs-serve:  ## RF-06: open the generated docs on localhost:8080
 	dbt docs serve --port 8080 $(DBT_ARGS)
 
-api:
-	uvicorn fundos_api.main:app --reload
+api:  ## RNF-03: read-only API on localhost:8000 (reads DUCKDB_PATH)
+	uvicorn fundos_api.main:app --reload --host 127.0.0.1 --port 8000
 
 lint:
 	ruff check src tests scripts && black --check src tests scripts && mypy src scripts

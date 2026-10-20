@@ -16,6 +16,7 @@
 | RF-10 | `fundos_api` | | ⬜ |
 | RF-11 | CI (Schemathesis) | | ⬜ |
 | RNF-01 | load test (locust/hey) | | ⬜ |
+| RNF-03 | `src/fundos_api/` (`config.py`, `db.py` read-only connection, `schemas.py`, `params.py`, `main.py`), `infra/docker-compose.yml` (`data/` mounted `:ro`, bound to `127.0.0.1`) | `tests/test_db.py` (writes rejected, missing file never created), `tests/test_health.py` (503 without paths), `tests/test_params.py` (422 on invalid pagination and CNPJ), `tests/test_schemas_config.py` (no CPF or natural-person names, settings validation); CI job `lint-test` | 🟡 read-only and validation done (5.1); API key pending (RF-10) |
 | RNF-05 | `dbt/dbt_project.yml` (layers), `docs/naming-conventions.md`, `dbt/macros/generate_schema_name.sql` | review; staging models and tests follow the convention | 🟡 staging done |
 
 ## Change log
@@ -30,3 +31,4 @@
 | 2026-10-19 | RF-03 facts: `fct_informe_diario` incremental (`delete+insert` by month; months whose load changed are rebuilt), joined to the `dim_fundo` version valid on the date with an unknown-member fallback (0 rows on it), 538,169 + 538,099 rows (2026-08, 2026-09); `fct_captacao_mensal` (RN-01) 25,578 rows per month; CI loads two months and checks a second incremental run keeps the row count | Task 3.3 | [003](adr/003-incremental-vs-table.md) |
 | 2026-10-19 | RF-05: tests for RN-01 (net inflow at every grain and against staging) and RN-02 (decimal money, date types, signs, dates in the reference month and not in the future, calendar keys); reproducible negative proof on a copy of the warehouse in CI (179 -> 202 data tests) | Task 4.1 | |
 | 2026-10-19 | RF-06: descriptions of every model, snapshot, seed and column (snapshot 4/25 -> 25/25 columns; marts 61/61, intermediate 21/21, staging 72/72), reusable `{% docs %}` blocks, exposure `fundos_api` on the four marts, coverage check in CI and the generated docs as a CI artifact; raw source columns stay documented in `docs/data-source.md` (8/71 in yml, reported, not required) | Task 4.2 | |
+| 2026-10-19 | RNF-03 (partial): FastAPI app factory, read-only DuckDB connection per request, pydantic-settings, Pydantic response schemas without personal data (LGPD), validated pagination and CNPJ, `/health` with the latest loaded month and 503 when the warehouse is unavailable | Task 5.1 | [004](adr/004-api-direct-duckdb-vs-cache.md) |

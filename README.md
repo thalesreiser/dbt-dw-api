@@ -162,6 +162,18 @@ FIF - CLASSE ... RESP LIMITADA [SCD2 TEST]    | 2026-10-19   | None          | T
 
 Interactive documentation at `http://localhost:8000/docs` (Swagger), generated from the OpenAPI spec.
 
+Run it with `make api` (or `uvicorn fundos_api.main:app`) after `make build`; it reads the marts
+of `DUCKDB_PATH` in **read-only** mode and never creates the file ([ADR 004](docs/adr/004-api-direct-duckdb-vs-cache.md)).
+Settings come from the environment or `.env` ([`.env.example`](.env.example)): `DUCKDB_PATH`,
+`MARTS_SCHEMA` (default `marts`), `API_PREFIX` (`/v1`), `DEFAULT_PAGE_SIZE` (50) and
+`MAX_PAGE_SIZE` (500, at most 1000).
+
+`GET /health` answers `{"status": "ok", "database": "reachable", "latest_month": "2026-09-01"}`
+(latest reference month loaded), or **503** with `"status": "unavailable"` when the warehouse
+is missing or cannot be read; file paths are never exposed. Invalid input (a CNPJ that is not
+14 digits, `limit`/`offset` out of bounds) gives **422** before any query runs (RNF-03).
+Responses carry fund and class data only: no CPF and no natural-person names (LGPD).
+
 | Method | Route | Description | Req. |
 |---|---|---|---|
 | GET | `/v1/fundos` | Lists funds with filters (e.g. status) and pagination | RF-07 |
