@@ -47,7 +47,7 @@ jobs:
           cp dbt/target/static_index.html _site/index.html
           touch _site/.nojekyll
           ls -la _site
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
