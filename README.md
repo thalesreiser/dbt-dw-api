@@ -362,7 +362,7 @@ the artifact `dbt-docs` of the `sources` job (publication on GitHub Pages: task 
 |---|---|---|
 | `dbt build` | no failures | — |
 | Marts documented and tested | 100% | — |
-| p95 of time-series endpoints | below 300 ms | — |
+| p95 of time-series endpoints | below 300 ms | 232 ms locally (laptop, 1 CVM month, 10 users); CI run pending ([performance](docs/performance.md)) |
 
 ## Documentation
 
@@ -377,6 +377,7 @@ the artifact `dbt-docs` of the `sources` job (publication on GitHub Pages: task 
 | [Data source](docs/data-source.md) | CVM files, layouts, encoding and key mapping (RF-01) |
 | [Naming conventions](docs/naming-conventions.md) | Layers, model names, column prefixes and types (RNF-05) |
 | [Testing](docs/testing.md) | Negative suites: invalid data -> failing tests (RF-05) |
+| [Performance](docs/performance.md) | RNF-01 load test (locust): method, environment, p50/p95/p99, how to rerun |
 | [Dimensional model](docs/dimensional-model.md) | Star schema, grain of each fact, surrogate keys, class-or-fund resolution (RF-03) |
 | [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175, staging grain and deduplication, registry snapshot |
 
