@@ -90,7 +90,7 @@ jobs:
           cat loadtest-report/loadtest.md >> "$GITHUB_STEP_SUMMARY"
       # Aggregates only (no CNPJ, no row of the warehouse).
       - name: Upload report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: loadtest-report
           path: loadtest-report/
