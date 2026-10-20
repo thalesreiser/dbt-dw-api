@@ -3,7 +3,8 @@
 Reads the current version of `dim_fundo` (`fl_versao_atual`) and never the unknown member.
 Ordering is deterministic (`cnpj_fundo_classe`) and every filter is a bound parameter.
 Registry status is shown as published by CVM: a cancelled fund that still reports is listed
-with `sit_fundo_classe = 'CANCELADO'` (and is returned by `situacao=CANCELADO`).
+with `sit_fundo_classe = 'CANCELADO'`; `fl_informa_recente` (filter `informa_recente`) tells
+whether the CNPJ has a daily report in the latest month loaded.
 """
 
 from typing import Annotated
@@ -12,9 +13,8 @@ import duckdb
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.exceptions import RequestValidationError
 
-from fundos_api.config import HARD_MAX_PAGE_SIZE
 from fundos_api.db import get_connection, get_settings_from_app
-from fundos_api.params import MAX_OFFSET, PageParams, PageQuery, pagination
+from fundos_api.params import PageParams, pagination
 from fundos_api.schemas import FundoResumo, Page
 
 router = APIRouter(tags=["fundos"])
@@ -65,21 +65,11 @@ def _situacao(
     return value
 
 
-def _fundos_pagination(
-    request: Request,
-    limit: Annotated[int | None, Query(ge=1, le=HARD_MAX_PAGE_SIZE)] = None,
-    offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
-) -> PageParams:
-    # The shared `pagination` dependency takes a query model that forbids extra parameters, so
-    # it cannot be combined with filters; reuse its defaulting and `max_page_size` check.
-    return pagination(PageQuery(limit=limit, offset=offset), get_settings_from_app(request))
-
-
 @router.get("/fundos", response_model=Page[FundoResumo])
 def list_fundos(
     request: Request,
     con: Annotated[duckdb.DuckDBPyConnection, Depends(get_connection)],
-    page: Annotated[PageParams, Depends(_fundos_pagination)],
+    page: Annotated[PageParams, Depends(pagination)],
     situacao: Annotated[str | None, Depends(_situacao)],
     tp_fundo: Annotated[
         str | None,
@@ -109,6 +99,13 @@ def list_fundos(
             "case-insensitive.",
         ),
     ] = None,
+    informa_recente: Annotated[
+        bool | None,
+        Query(
+            description="Filter by `fl_informa_recente`: the CNPJ has a daily report in the "
+            "latest month loaded (e.g. `situacao=CANCELADO&informa_recente=true`).",
+        ),
+    ] = None,
 ) -> Page[FundoResumo]:
     """Current funds/classes, filtered and paginated with `limit`/`offset`, by CNPJ."""
     schema = get_settings_from_app(request).marts_schema
@@ -126,6 +123,9 @@ def list_fundos(
     if nome is not None:
         where.append("contains(lower(nm_denominacao_social), lower(?))")
         params.append(nome)
+    if informa_recente is not None:
+        where.append("fl_informa_recente = ?")
+        params.append(informa_recente)
     base = f"from {schema}.dim_fundo where " + " and ".join(where)
 
     count_row = con.execute(f"select count(*) {base}", params).fetchone()
