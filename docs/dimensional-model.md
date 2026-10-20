@@ -207,8 +207,10 @@ every CNPJ has one version, already following the history rules (`dt_valido_de =
 `dt_valido_ate` null, `fl_versao_atual` true), so `sk_fundo` will not change when the snapshot
 takes over. Two columns were added to the diagram's list: `sit_fundo` (fund status, also on
 class rows) and `dt_registro` (of the kept registry entry). Cancelled funds that still report
-(233 in 2026-09) keep `sit_fundo_classe = 'CANCELADO'`; whether `GET /v1/fundos` (RF-07) lists
-them under a status filter, or flags them, is decided with the API.
+(233 in 2026-09) keep `sit_fundo_classe = 'CANCELADO'`; the flag `fl_informa_recente` (a daily
+report in the latest month loaded, computed from `stg_cvm__informe_diario` to avoid a cycle
+with the fact; false for the unknown member) tells them apart, and `GET /v1/fundos` (RF-07)
+filters on it with `informa_recente`.
 
 **History (SCD type 2, implemented in task 3.4, [ADR 007](adr/007-registry-snapshot-source-and-hard-deletes.md)).**
 `int_fundo_classe__unificado` (now a view, schema `intermediate`) is snapshotted by
