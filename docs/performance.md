@@ -49,7 +49,11 @@ read-only connection per request) depends on it.
 | Local laptop, 2026-10-20 | 1 month | `/v1/fundos/[cnpj]/serie` | 1,625 | 18.0 | 0% | 112 | **232** | 327 |
 | Local laptop, 2026-10-20 | 1 month | `/v1/fundos` | 195 | 2.2 | 0% | 136 | 228 | 302 |
 | Local laptop, 2026-10-20 | 1 month | `/v1/rankings/captacao` | 189 | 2.1 | 0% | 215 | 355 | 458 |
-| CI run: **pending** (first `workflow_dispatch` after merge) | 2 months | `/v1/fundos/[cnpj]/serie` | | | | | | |
+| [CI run 39487103055](https://github.com/thalesreiser/dbt-dw-api/actions/runs/39487103055), 2026-10-20 | 2 months | `/v1/fundos/[cnpj]/serie` | 8,261 | 46.1 | 0% | 31 | **54** | 69 |
+| [CI run 39487103055](https://github.com/thalesreiser/dbt-dw-api/actions/runs/39487103055), 2026-10-20 | 2 months | `/v1/fundos` | 1,090 | 6.1 | 0% | 48 | 77 | 93 |
+| [CI run 39487103055](https://github.com/thalesreiser/dbt-dw-api/actions/runs/39487103055), 2026-10-20 | 2 months | `/v1/rankings/captacao` | 1,097 | 6.1 | 0% | 82 | 120 | 140 |
+
+**Reference run (CI, 4 vCPU GitHub runner, 2 CVM months, uvicorn 2 workers, locust 20 users for 3 min, API key on and rate limit raised for the run): the series p95 is 54 ms, well below the 300 ms target, with 0% errors** (10,448 requests, 58 RPS in total). The connection-per-request cost measured locally still dominates; the shared-connection fallback of ADR 004 stays unnecessary.
 
 Locally the target is **met** (p95 232 ms < 300 ms), with no errors. The CI row is the
 reference result and is filled in after the first manual run.
