@@ -188,6 +188,16 @@ curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/rankings/captacao?mes=2026-09&t
 
 Without the key the API returns **401**; above the rate limit, **429** (RF-10).
 
+`GET /v1/fundos/{cnpj}/serie` (RF-08) returns the daily points of a fund/class ordered by date
+ascending: `{"cnpj_fundo_classe": ..., "inicio": "2025-09-02", "fim": "2026-09-01", "items":
+[{"sk_data": "2026-09-01", "vl_quota": "1.600000000000", "vl_patrim_liq": "110.00", ...}]}`.
+`inicio` and `fim` (ISO dates, inclusive) are optional: `fim` defaults to the latest reported day
+of the CNPJ and `inicio` to 12 months before it; `inicio > fim` or a period above 1,830 days
+(about five years) gives **422**. Points are at class level: subclass rows are summed into their
+class as in `fct_captacao_mensal` (`vl_quota` is null on a day with more than one subclass and
+`id_subclasse` is always null). A CNPJ absent from `dim_fundo` (any version) gives **404**; a
+known CNPJ without reports in the period gives **200** with `"items": []`.
+
 ## Quality at every level
 
 | Level | What it guarantees | Tool |
