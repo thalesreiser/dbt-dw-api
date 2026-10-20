@@ -200,6 +200,17 @@ Without the key the API returns **401**; above the rate limit, **429** (RF-10).
 
 CI fails if any test in `dbt build` fails (RNF-02). There is also a **negative test**: invalid data inserted on purpose must make a test fail, proving that the tests actually work.
 
+**Negative tests (RF-05).** Two suites prove that the tests fail on invalid data:
+
+```bash
+make negative-tests    # 4.1: tamper rows in a copy of the built warehouse (needs `make marts`)
+make negative-fixture  # 4.3: network-free, synthetic seeds; each case fails exactly its tests
+```
+
+The fixture suite covers null and duplicate keys, orphan keys (registry and fact -> dimension),
+RN-01, RN-02 (negative flow, future date, date outside the reference month) and an SCD2 overlap;
+the case -> failing tests table is in [docs/testing.md](docs/testing.md).
+
 ## Stack
 
 | Layer | Technology | Why |
@@ -310,6 +321,7 @@ the artifact `dbt-docs` of the `sources` job (publication on GitHub Pages: task 
 | [06 - Traceability](docs/06-traceability.md) | Requirement → component → test |
 | [Data source](docs/data-source.md) | CVM files, layouts, encoding and key mapping (RF-01) |
 | [Naming conventions](docs/naming-conventions.md) | Layers, model names, column prefixes and types (RNF-05) |
+| [Testing](docs/testing.md) | Negative suites: invalid data -> failing tests (RF-05) |
 | [Dimensional model](docs/dimensional-model.md) | Star schema, grain of each fact, surrogate keys, class-or-fund resolution (RF-03) |
 | [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175, staging grain and deduplication, registry snapshot |
 

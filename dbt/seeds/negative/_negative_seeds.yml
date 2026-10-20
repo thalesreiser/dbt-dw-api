@@ -1,0 +1,20 @@
+version: 2
+
+# RF-05 (4.3): synthetic fixture of the network-free negative suite. Enabled only with
+# --vars '{negative_fixture: true}' (dbt_project.yml); scripts/negative_fixture_tests.py loads it,
+# copies the rows of one case into the `raw` schema and asserts which tests fail.
+# Every CNPJ is synthetic (valid check digits, not a real fund); no natural persons.
+
+seeds:
+  - name: neg_informe_diario
+    description: >
+      Synthetic rows in the layout of `raw.informe_diario` (source `cvm.informe_diario`).
+      `negative_case` empty = clean row; otherwise the row is added only for that case.
+  - name: neg_cadastro_fundos
+    description: >
+      Synthetic rows in the layout of `raw.cadastro_fundos` (source `cvm.cadastro_fundos`).
+      `negative_case` empty = clean row; otherwise the row is added only for that case.
+  - name: neg_cadastro_classes
+    description: >
+      Synthetic rows in the layout of `raw.cadastro_classes` (source `cvm.cadastro_classes`).
+      `negative_case` empty = clean row; otherwise the row is added only for that case.
