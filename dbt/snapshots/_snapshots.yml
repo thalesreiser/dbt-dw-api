@@ -18,10 +18,53 @@ snapshots:
         description: Unique id of the version (dbt).
         tests: [not_null, unique]
       - name: cnpj_fundo_classe
-        description: Natural key (reporting CNPJ).
+        description: "{{ doc('cnpj_fundo_classe') }}"
         tests: [not_null]
       - name: dbt_valid_from
         description: Timestamp of the snapshot run that opened the version.
         tests: [not_null]
       - name: dbt_valid_to
         description: Timestamp of the snapshot run that closed the version; null if current.
+      # Tracked attributes, same meaning as in int_fundo_classe__unificado.
+      - name: tp_registro
+        description: "`CLASSE` or `FUNDO`: which registry the row comes from."
+      - name: id_registro_classe
+        description: "CVM registry id of the class; null for fund-only rows."
+      - name: id_registro_fundo
+        description: "CVM registry id of the fund (the parent fund for class rows)."
+      - name: cnpj_fundo
+        description: "CNPJ of the fund (the parent fund for class rows)."
+      - name: nm_denominacao_social
+        description: "Legal name of the class, else of the fund."
+      - name: nm_denominacao_social_fundo
+        description: "Legal name of the fund."
+      - name: tp_fundo
+        description: "Fund type (e.g. FI, FIF, FIDC)."
+      - name: tp_classe
+        description: "Class type; null for fund-only rows."
+      - name: sit_fundo_classe
+        description: "Registry status of the class, else of the fund."
+      - name: sit_fundo
+        description: "Registry status of the fund."
+      - name: tp_classificacao
+        description: "CVM classification of the class; null for fund-only rows."
+      - name: tp_classificacao_anbima
+        description: "ANBIMA classification of the class; null for fund-only rows."
+      - name: tp_condominio
+        description: "Open or closed-end (`ABERTO`, `FECHADO`); null for fund-only rows."
+      - name: tp_publico_alvo
+        description: "Target investors of the class; null for fund-only rows."
+      - name: fl_exclusivo
+        description: "Exclusive class flag; null for fund-only rows."
+      - name: cnpj_administrador
+        description: "CNPJ of the fund administrator."
+      - name: nm_administrador
+        description: "Name of the fund administrator."
+      - name: cpf_cnpj_gestor
+        description: "CPF or CNPJ of the fund manager (first manager, ADR 006)."
+      - name: nm_gestor
+        description: "Name of the fund manager (first manager, ADR 006)."
+      - name: dt_registro
+        description: "Registration date at CVM of the kept registry entry (class, else fund)."
+      - name: dbt_updated_at
+        description: "{{ doc('dbt_updated_at') }}"

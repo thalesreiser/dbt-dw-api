@@ -1,0 +1,26 @@
+version: 2
+
+# RF-06 (4.2): the consumers of the marts, so the lineage graph ends at the API.
+# Endpoints: README "API" and docs/03-specification.md (RF-07 to RF-10, epic 5).
+
+exposures:
+  - name: fundos_api
+    label: fundos_api (REST API)
+    type: application
+    maturity: low
+    url: http://localhost:8000/docs
+    description: >
+      Read-only FastAPI service (`src/fundos_api/`) that serves the marts with an API key and
+      rate limit (RF-10). `GET /v1/fundos` lists funds from `dim_fundo` (current versions,
+      filters and pagination, RF-07); `GET /v1/fundos/{cnpj}/serie` returns the share value and
+      net assets series from `fct_informe_diario` over `dim_data`, or 404 when the CNPJ is not
+      in `dim_fundo` (RF-08); `GET /v1/rankings/captacao` ranks funds by monthly net inflows
+      (RN-01) from `fct_captacao_mensal` joined to `dim_fundo` (RF-09). Under construction in
+      epic 5; today only `/health` is served.
+    depends_on:
+      - ref('dim_fundo')
+      - ref('dim_data')
+      - ref('fct_informe_diario')
+      - ref('fct_captacao_mensal')
+    owner:
+      name: Thales Reiser

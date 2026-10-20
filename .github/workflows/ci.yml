@@ -58,6 +58,20 @@ jobs:
       # RF-03 acceptance (3.3): the facts too, with `relationships` tests (no orphans).
       - name: Marts models and tests
         run: make marts
+      # RF-06 (4.2): dbt docs (descriptions and lineage, sources to the `fundos_api` exposure)
+      # on the built warehouse, so the catalog has every column; fails on undocumented items.
+      - name: dbt docs and documentation coverage
+        run: make docs docs-coverage
+      - name: Upload dbt docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: |
+            dbt/target/index.html
+            dbt/target/manifest.json
+            dbt/target/catalog.json
+          if-no-files-found: error
+          retention-days: 14
       # ADR 003: a second incremental run with no new load must not change the daily fact.
       - name: Incremental fact is idempotent
         run: |

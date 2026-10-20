@@ -8,7 +8,7 @@ COMPETENCIA ?=
 COMPETENCIAS ?= 1
 LOAD_ARGS = --competencias $(COMPETENCIAS) $(if $(COMPETENCIA),--competencia $(COMPETENCIA),)
 
-.PHONY: install up down deps load load-p1 freshness row-counts sources staging snapshot scd2-sim negative-tests marts build docs api lint fmt test
+.PHONY: install up down deps load load-p1 freshness row-counts sources staging snapshot scd2-sim negative-tests marts build docs docs-coverage docs-serve api lint fmt test
 
 install:
 	pip install -e ".[dev,dbt]" && pre-commit install
@@ -55,8 +55,14 @@ marts: deps  ## RF-03: build the seeds and the marts with everything upstream, a
 build: deps  ## RNF-02: fails if any test fails
 	dbt build $(DBT_ARGS)
 
-docs:  ## RF-06
+docs: deps  ## RF-06: dbt docs (manifest + catalog; needs the built warehouse for the catalog)
 	dbt docs generate $(DBT_ARGS)
+
+docs-coverage:  ## RF-06: fail if a model, snapshot, seed or exposure, or a column, lacks a description
+	$(PYTHON) scripts/check_docs_coverage.py --target dbt/target
+
+docs-serve:  ## RF-06: open the generated docs on localhost:8080
+	dbt docs serve --port 8080 $(DBT_ARGS)
 
 api:
 	uvicorn fundos_api.main:app --reload

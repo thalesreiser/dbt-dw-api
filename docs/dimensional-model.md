@@ -274,6 +274,45 @@ The facts have no surrogate key of their own. Their natural grain is enforced wi
 - Measure names keep the staging names and prefixes (`vl_`, `nr_`); period suffixes are `_dia`
   and `_mes`, and `_fim_mes` marks a semi-additive end-of-period value.
 
+## Lineage
+
+`dbt docs generate` (`make docs`, RF-06) draws this graph; every node and column has a
+description (`make docs-coverage`). The API is declared as the exposure `fundos_api`
+(`dbt/models/exposures.yml`), so the graph ends at its consumer.
+
+```mermaid
+flowchart LR
+  subgraph raw[sources: raw]
+    s1[cvm.informe_diario]
+    s2[cvm.cadastro_fundos]
+    s3[cvm.cadastro_classes]
+  end
+  subgraph stg[staging]
+    g1[stg_cvm__informe_diario]
+    g2[stg_cvm__cadastro_fundos]
+    g3[stg_cvm__cadastro_classes]
+  end
+  s1 --> g1
+  s2 --> g2
+  s3 --> g3
+  g2 --> i[int_fundo_classe__unificado]
+  g3 --> i
+  i --> snp[(snp_cvm__fundo_classe)]
+  snp --> df[dim_fundo]
+  seed[/seed feriados_nacionais/] --> dd[dim_data]
+  g1 --> dd
+  g1 --> fd[fct_informe_diario]
+  df --> fd
+  fd --> fm[fct_captacao_mensal]
+  df & dd & fd & fm --> api{{exposure fundos_api}}
+```
+
+- `fct_informe_diario` reads `dim_fundo` to resolve the version valid on each date; its link to
+  `dim_data` (and that of `fct_captacao_mensal` to `dim_fundo` and `dim_data`) is a
+  `relationships` test, not a build dependency, so it is not an edge of the dbt graph.
+- `dim_data` reads `stg_cvm__informe_diario` only to find the first reference month loaded.
+- `fct_captacao_mensal` is built from the daily fact alone and keeps its `sk_fundo`.
+
 ## Implementation plan
 
 | Task | Models | Materialization |
