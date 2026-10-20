@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Upper bound for any configured page size, so a misconfiguration cannot open unbounded scans.
@@ -28,6 +28,26 @@ class Settings(BaseSettings):
     api_prefix: str = Field(default="/v1", pattern=r"^/[a-z0-9]+$")
     default_page_size: int = Field(default=50, ge=1, le=HARD_MAX_PAGE_SIZE)
     max_page_size: int = Field(default=500, ge=1, le=HARD_MAX_PAGE_SIZE)
+    api_key: SecretStr | None = Field(
+        default=None,
+        description=(
+            "Key required in the `X-API-Key` header on every route under `api_prefix` (RF-10). "
+            "When unset or blank those routes fail closed with 503."
+        ),
+    )
+    rate_limit_requests: int = Field(
+        default=60, ge=1, description="Requests allowed per key in each rate-limit window."
+    )
+    rate_limit_window_seconds: int = Field(
+        default=60, ge=1, le=86_400, description="Length of the fixed rate-limit window."
+    )
+
+    @field_validator("api_key", mode="after")
+    @classmethod
+    def _blank_key_is_unset(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is None or not value.get_secret_value().strip():
+            return None
+        return value
 
     @model_validator(mode="after")
     def _check_page_sizes(self) -> Self:

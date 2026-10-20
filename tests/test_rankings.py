@@ -6,7 +6,7 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from conftest import CNPJ_CLASSE, build_warehouse
+from conftest import CNPJ_CLASSE, api_client, build_warehouse
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
@@ -49,7 +49,7 @@ def rk(tmp_path: Path) -> TestClient:
         con.execute(EXTRA_ROWS)
     finally:
         con.close()
-    return TestClient(create_app(Settings(duckdb_path=path, _env_file=None)))  # type: ignore[call-arg]
+    return api_client(create_app(Settings(duckdb_path=path, _env_file=None)))  # type: ignore[call-arg]
 
 
 def _cnpjs(body: dict[str, object]) -> list[str]:
@@ -129,14 +129,14 @@ def test_month_without_data_gives_404(rk: TestClient) -> None:
 def test_empty_warehouse_gives_404(tmp_path: Path) -> None:
     path = build_warehouse(tmp_path / "empty.duckdb", with_rows=False)
     app = create_app(Settings(duckdb_path=path, _env_file=None))  # type: ignore[call-arg]
-    resp = TestClient(app).get(URL)
+    resp = api_client(app).get(URL)
     assert resp.status_code == 404
     assert resp.json() == {"detail": "no monthly data available"}
 
 
 def test_missing_warehouse_gives_503(tmp_path: Path) -> None:
     app = create_app(Settings(duckdb_path=tmp_path / "none.duckdb", _env_file=None))  # type: ignore[call-arg]
-    resp = TestClient(app).get(URL)
+    resp = api_client(app).get(URL)
     assert resp.status_code == 503
     assert "none.duckdb" not in resp.text
 

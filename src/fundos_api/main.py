@@ -7,7 +7,7 @@ import logging
 from datetime import date
 
 import duckdb
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, Request, Response, Security, status
 from fastapi.responses import JSONResponse
 
 from fundos_api import __version__
@@ -15,6 +15,7 @@ from fundos_api.config import Settings, get_settings
 from fundos_api.db import WarehouseUnavailableError, connect_read_only, get_settings_from_app
 from fundos_api.routers import fundos, rankings, serie
 from fundos_api.schemas import ErrorResponse, HealthResponse
+from fundos_api.security import AUTH_RESPONSES, RateLimiter, require_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +33,16 @@ def _warehouse_unavailable(request: Request, exc: Exception) -> JSONResponse:
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
-    """App factory; tests pass their own settings (e.g. a synthetic warehouse)."""
+    """App factory; tests pass their own settings (e.g. a synthetic warehouse).
+
+    `/health`, `/docs` and `/openapi.json` are public; every route under `api_prefix` requires
+    the `X-API-Key` header and is rate limited per key (RF-10, `fundos_api.security`).
+    """
     app = FastAPI(title="Fundos DW API", version=__version__)
-    app.state.settings = settings or get_settings()
+    app.state.settings = config = settings or get_settings()
+    app.state.rate_limiter = RateLimiter(
+        config.rate_limit_requests, config.rate_limit_window_seconds
+    )
     app.add_exception_handler(WarehouseUnavailableError, _warehouse_unavailable)
 
     @app.get(
@@ -58,9 +66,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return HealthResponse(status="unavailable", database="reachable")
         return HealthResponse(status="ok", database="reachable", latest_month=month)
 
-    app.include_router(fundos.router, prefix=app.state.settings.api_prefix)
-    app.include_router(serie.router, prefix=app.state.settings.api_prefix)
-    app.include_router(rankings.router, prefix=app.state.settings.api_prefix)
+    for module in (fundos, serie, rankings):
+        app.include_router(
+            module.router,
+            prefix=config.api_prefix,
+            dependencies=[Security(require_api_key)],
+            responses=AUTH_RESPONSES,
+        )
     return app
 
 
