@@ -395,7 +395,7 @@ or the loader: **https://thalesreiser.github.io/dbt-dw-api/** (task 7.3).
 |---|---|---|
 | `dbt build` | no failures | — |
 | Marts documented and tested | 100% | — |
-| p95 of time-series endpoints | below 300 ms | 232 ms locally (laptop, 1 CVM month, 10 users); CI run pending ([performance](docs/performance.md)) |
+| p95 of time-series endpoints | below 300 ms | **54 ms** on CI (2 CVM months, 20 users, 0% errors); 232 ms on a laptop ([performance](docs/performance.md)) |
 
 ## Documentation
 
