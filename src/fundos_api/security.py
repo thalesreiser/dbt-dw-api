@@ -3,11 +3,12 @@
 - The key travels in the `X-API-Key` header and is compared with `hmac.compare_digest`.
 - Without a configured `API_KEY` the protected routes fail closed (503), never open.
 - The limiter is a fixed window kept in memory: it is per process, so with N uvicorn workers
-  a key gets up to N times the limit (ADR 004). Only authenticated keys are counted, so the
-  table cannot be filled with arbitrary header values.
+  a key gets up to N times the limit (ADR 004). Only authenticated requests are counted, under
+  the key's identifier (never the key itself), so the table cannot be filled with arbitrary
+  header values. There is one configured key today (`DEFAULT_KEY_ID`); the limiter already
+  keeps one window per identifier for when several keys exist.
 """
 
-import hashlib
 import hmac
 import math
 import threading
@@ -22,6 +23,8 @@ from fundos_api.db import get_settings_from_app
 from fundos_api.schemas import ErrorResponse
 
 API_KEY_HEADER = "X-API-Key"
+# Identifier of the single key configured through `API_KEY`, used as the rate-limit bucket.
+DEFAULT_KEY_ID = "default"
 
 api_key_header = APIKeyHeader(
     name=API_KEY_HEADER,
@@ -95,7 +98,7 @@ def require_api_key(
     if not hmac.compare_digest(api_key.encode(), expected.get_secret_value().encode()):
         raise _unauthorized("invalid API key")
     limiter: RateLimiter = request.app.state.rate_limiter
-    retry_after = limiter.hit(hashlib.sha256(api_key.encode()).hexdigest())
+    retry_after = limiter.hit(DEFAULT_KEY_ID)
     if retry_after is not None:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
