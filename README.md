@@ -188,6 +188,24 @@ curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/rankings/captacao?mes=2026-09&t
 
 Without the key the API returns **401**; above the rate limit, **429** (RF-10).
 
+**`GET /v1/rankings/captacao`** (RF-09) ranks the funds/classes of a month by net inflows
+(`vl_captc_liquida_mes` = inflows - redemptions, RN-01) from `fct_captacao_mensal`. Parameters:
+`mes` (`YYYY-MM`, default: latest month loaded), `top` (1-100, default 10) and `ordem`
+(`desc` = largest net inflows first, default; `asc` = largest net outflows first). Ties are
+broken by CNPJ (ascending). Each item has `posicao`, `cnpj_fundo_classe`, the name from the
+current `dim_fundo` version, `vl_captc_liquida_mes`, `vl_captc_mes`, `vl_resg_mes`,
+`vl_patrim_liq_fim_mes`, `nr_cotst_fim_mes` and `nr_dias_informados`; amounts are decimal
+strings. A month without data gives **404** (`{"detail": "no data for month 2026-07"}`); an
+invalid `mes`, `top` or `ordem` gives **422**.
+
+```json
+{"sk_mes": "2026-09-01", "ordem": "desc", "top": 10, "items": [
+  {"posicao": 1, "cnpj_fundo_classe": "<CNPJ>", "nm_denominacao_social": "<name>",
+   "sk_mes": "2026-09-01", "vl_captc_mes": "20.50", "vl_resg_mes": "0.50",
+   "vl_captc_liquida_mes": "20.00", "vl_patrim_liq_fim_mes": "1000.10",
+   "nr_cotst_fim_mes": 7, "nr_dias_informados": 21}]}
+```
+
 ## Quality at every level
 
 | Level | What it guarantees | Tool |

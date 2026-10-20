@@ -12,7 +12,7 @@
 | RF-06 | `description:` in every `dbt/**/*.yml`, `dbt/models/docs.md` (`{% docs %}` blocks and `__overview__`), `dbt/models/exposures.yml` (`fundos_api`), `scripts/check_docs_coverage.py`; lineage in `docs/dimensional-model.md` | `make docs docs-coverage` (fails if a model, snapshot, seed or exposure, or any of their columns in the catalog, has no description), `tests/test_check_docs_coverage.py`; CI job `sources`, step `dbt docs and documentation coverage` + artifact `dbt-docs`; review of the lineage | ✅ |
 | RF-07 | `fundos_api` | | ⬜ |
 | RF-08 | `fundos_api` | | ⬜ |
-| RF-09 | `fundos_api` | | ⬜ |
+| RF-09 | `src/fundos_api/routers/rankings.py` (`GET /v1/rankings/captacao`), `schemas.py` (`RankingCaptacao`) | `tests/test_rankings.py` (order and CNPJ tie-break, `asc`, `top` bounds, default month, 422 on bad `mes`/`top`/`ordem`, 404 without data, decimal strings, current `dim_fundo` name, no personal data); CI job `lint-test` | ✅ |
 | RF-10 | `fundos_api` | | ⬜ |
 | RF-11 | CI (Schemathesis) | | ⬜ |
 | RNF-01 | load test (locust/hey) | | ⬜ |
@@ -32,3 +32,4 @@
 | 2026-10-19 | RF-05: tests for RN-01 (net inflow at every grain and against staging) and RN-02 (decimal money, date types, signs, dates in the reference month and not in the future, calendar keys); reproducible negative proof on a copy of the warehouse in CI (179 -> 202 data tests) | Task 4.1 | |
 | 2026-10-19 | RF-06: descriptions of every model, snapshot, seed and column (snapshot 4/25 -> 25/25 columns; marts 61/61, intermediate 21/21, staging 72/72), reusable `{% docs %}` blocks, exposure `fundos_api` on the four marts, coverage check in CI and the generated docs as a CI artifact; raw source columns stay documented in `docs/data-source.md` (8/71 in yml, reported, not required) | Task 4.2 | |
 | 2026-10-19 | RNF-03 (partial): FastAPI app factory, read-only DuckDB connection per request, pydantic-settings, Pydantic response schemas without personal data (LGPD), validated pagination and CNPJ, `/health` with the latest loaded month and 503 when the warehouse is unavailable | Task 5.1 | [004](adr/004-api-direct-duckdb-vs-cache.md) |
+| 2026-10-19 | RF-09: `GET /v1/rankings/captacao` with `mes` (default latest month), `top` (1-100) and `ordem`, ranked by net inflows (RN-01) with CNPJ tie-break, names from the current `dim_fundo` version, 404 for a month without data | Task 5.4 | |
