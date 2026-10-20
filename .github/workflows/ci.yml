@@ -104,3 +104,19 @@ jobs:
       # snapshot again and assert two versions with contiguous validity.
       - name: SCD2 simulation
         run: make scd2-sim
+
+  # Task 5.6: API integration tests. A test warehouse is built by the real dbt project (models,
+  # snapshot and every dbt test) from synthetic raw rows (tests/fixtures/warehouse/), then every
+  # endpoint is called through httpx (ASGI transport) and checked against the marts. No network
+  # besides `dbt deps`.
+  api-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev,dbt]"
+      - name: API integration tests over the test warehouse
+        run: make test-integration

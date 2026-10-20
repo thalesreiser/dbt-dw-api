@@ -5,7 +5,7 @@ from typing import Any
 
 import duckdb
 import pytest
-from conftest import CNPJ_CLASSE
+from conftest import CNPJ_CLASSE, api_client
 from fastapi.testclient import TestClient
 
 from fundos_api.config import Settings
@@ -93,7 +93,7 @@ def fundos_client(warehouse: Path, settings: Settings) -> TestClient:
         con.execute("insert into marts.dim_fundo values " + ", ".join(EXTRA_ROWS))
     finally:
         con.close()
-    return TestClient(create_app(settings))
+    return api_client(create_app(settings))
 
 
 def _get(client: TestClient, **params: Any) -> dict[str, Any]:
@@ -215,13 +215,13 @@ def test_empty_dimension_returns_empty_page(tmp_path: Path) -> None:
     from conftest import build_warehouse
 
     path = build_warehouse(tmp_path / "empty.duckdb", with_rows=False)
-    client = TestClient(create_app(Settings(duckdb_path=path, _env_file=None)))  # type: ignore[call-arg]
+    client = api_client(create_app(Settings(duckdb_path=path, _env_file=None)))  # type: ignore[call-arg]
     assert _get(client) == {"items": [], "limit": 50, "offset": 0, "total": 0}
 
 
 def test_missing_warehouse_is_503_and_creates_nothing(tmp_path: Path) -> None:
     path = tmp_path / "missing.duckdb"
-    client = TestClient(create_app(Settings(duckdb_path=path, _env_file=None)))  # type: ignore[call-arg]
+    client = api_client(create_app(Settings(duckdb_path=path, _env_file=None)))  # type: ignore[call-arg]
     response = client.get("/v1/fundos")
     assert response.status_code == 503
     assert str(tmp_path) not in response.text
