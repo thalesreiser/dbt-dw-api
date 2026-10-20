@@ -3,6 +3,7 @@ version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/"
+    assignees: ["thalesreiser"]
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
@@ -16,6 +17,7 @@ updates:
 
   - package-ecosystem: "github-actions"
     directory: "/"
+    assignees: ["thalesreiser"]
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
