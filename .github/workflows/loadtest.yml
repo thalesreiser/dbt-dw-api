@@ -33,7 +33,7 @@ jobs:
       RATE_LIMIT_REQUESTS: "1000000"
       RATE_LIMIT_WINDOW_SECONDS: "60"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
