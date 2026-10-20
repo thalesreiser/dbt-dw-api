@@ -25,18 +25,19 @@ The MIT license applies to the **code**, not to the data it processes.
 - The data belongs to its sources and follows their terms of use.
 - Whoever runs the project is responsible for using the data in accordance with Brazil's data protection law (**LGPD, Law 13,709/2018**) and the terms of the sources.
 - **Fund data (CVM):** daily reports and the registry of investment funds, public data about legal entities. The results are not investment advice.
+- **Attribution:** Source: Comissão de Valores Mobiliários (CVM) — Portal Dados Abertos (dados.cvm.gov.br), licensed under the Open Database License (ODbL). This repository does not redistribute CVM data (it contains only code, a national holiday calendar seed and synthetic test fixtures). Results derived from it remain subject to the ODbL attribution and share-alike terms if published as a database. The MIT license covers the code only.
 
 ## API usage
 
 - The API is **read-only** and designed to run locally. It must **not** be exposed to the internet without a security review.
-- Access requires an API key defined in your `.env`. Never publish that key.
-- Respect the configured rate limit. Load tests must only target your own local instance.
+- The API key and the rate limit (RF-10) are **not implemented yet**: until they are, the API has no authentication and must stay bound to `127.0.0.1` (see [SECURITY.md](SECURITY.md)). Once RF-10 lands, the key goes in your `.env` and must never be published.
+- Load tests must only target your own local instance.
 
 ## Security
 
 - No secret, key or credential may be committed. Create your own `.env` (ignored by Git) from `.env.example`.
 - The pre-commit hooks run **gitleaks** to detect secrets before every commit.
-- If you find a vulnerability, **do not open a public issue**: contact the author directly on GitHub or LinkedIn.
+- If you find a vulnerability, **do not open a public issue**: report it privately through GitHub private vulnerability reporting, as described in [`SECURITY.md`](SECURITY.md).
 
 ## Contributions
 
