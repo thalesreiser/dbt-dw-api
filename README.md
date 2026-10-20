@@ -376,6 +376,18 @@ the artifact `dbt-docs` of the `sources` job (publication on GitHub Pages: task 
 | P1 | [aws-fundos-pipeline](https://github.com/thalesreiser/aws-fundos-pipeline) | AWS pipeline that produces the data consumed here |
 | **P3** | **dbt-dw-api** (this one) | Data warehouse with dbt, data quality and a REST API |
 
+## Data source and attribution
+
+Source: Comissão de Valores Mobiliários (CVM) — Portal Dados Abertos
+([dados.cvm.gov.br](https://dados.cvm.gov.br)), licensed under the
+[Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/1-0/).
+
+This repository does **not** redistribute CVM data: it contains only code, a national holiday
+calendar seed and synthetic test fixtures, and the data is
+downloaded from the portal at run time. Results derived from CVM data remain subject to the ODbL
+attribution and share-alike terms if you publish them as a database. The MIT license below
+covers the code only. Details in [`USAGE-POLICY.md`](USAGE-POLICY.md).
+
 ## License
 
 Code under the [MIT](LICENSE) license: it may be used, copied and modified, including commercially, as long as the copyright notice of **Thales Reiser Pedreira** is kept. Rules about data, security and API usage are in [`USAGE-POLICY.md`](USAGE-POLICY.md).
