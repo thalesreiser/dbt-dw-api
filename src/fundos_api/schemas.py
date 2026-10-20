@@ -95,3 +95,18 @@ class Page(_Model, Generic[T]):
     limit: int = Field(ge=1)
     offset: int = Field(ge=0)
     total: int = Field(ge=0, description="Total number of matching rows.")
+
+
+class RankingCaptacaoItem(CaptacaoMensal):
+    """One position of the monthly net inflows ranking (RF-09)."""
+
+    posicao: int = Field(ge=1, description="Position in the ranking, starting at 1.")
+
+
+class RankingCaptacao(_Model):
+    """Top N funds/classes of a month by net inflows (RF-09, RN-01)."""
+
+    sk_mes: date = Field(description="Reference month (first day).")
+    ordem: Literal["desc", "asc"]
+    top: int = Field(ge=1)
+    items: list[RankingCaptacaoItem]
