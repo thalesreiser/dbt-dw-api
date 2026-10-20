@@ -167,7 +167,8 @@ Run it with `make api` (or `uvicorn fundos_api.main:app`) after `make build`; it
 of `DUCKDB_PATH` in **read-only** mode and never creates the file ([ADR 004](docs/adr/004-api-direct-duckdb-vs-cache.md)).
 Settings come from the environment or `.env` ([`.env.example`](.env.example)): `DUCKDB_PATH`,
 `MARTS_SCHEMA` (default `marts`), `API_PREFIX` (`/v1`), `DEFAULT_PAGE_SIZE` (50) and
-`MAX_PAGE_SIZE` (500, at most 1000).
+`MAX_PAGE_SIZE` (500, at most 1000), `API_KEY`, `RATE_LIMIT_REQUESTS` (60) and
+`RATE_LIMIT_WINDOW_SECONDS` (60).
 
 `GET /health` answers `{"status": "ok", "database": "reachable", "latest_month": "2026-09-01"}`
 (latest reference month loaded), or **503** with `"status": "unavailable"` when the warehouse
@@ -195,7 +196,22 @@ curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos/<FUND_CNPJ>/serie?inicio
 curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/rankings/captacao?mes=2026-09&top=10"
 ```
 
-Without the key the API returns **401**; above the rate limit, **429** (RF-10).
+**API key and rate limit (RF-10).** Every `/v1/*` route requires the `X-API-Key` header;
+`/health`, `/docs` and `/openapi.json` stay public (Swagger shows the lock and an *Authorize*
+button). Set the key in `.env` (`API_KEY=<long random value>`, e.g. from
+`python -c "import secrets; print(secrets.token_urlsafe(32))"`) and never commit it; it is
+compared in constant time (`hmac.compare_digest`).
+
+| Situation | Status | Body / headers |
+|---|---|---|
+| Header missing or key wrong | **401** | `{"detail": "missing X-API-Key header"}` / `{"detail": "invalid API key"}`, `WWW-Authenticate: X-API-Key` |
+| More than `RATE_LIMIT_REQUESTS` (60) requests per key in `RATE_LIMIT_WINDOW_SECONDS` (60 s) | **429** | `{"detail": "rate limit exceeded"}`, `Retry-After: <seconds>` |
+| `API_KEY` not set (or blank) on the server | **503** | `{"detail": "API key not configured on the server"}`: the API fails closed, never open |
+
+The limit is a fixed window kept in process memory: it is per process, not shared across
+uvicorn workers or replicas (with N workers a key gets up to N times the limit), and it resets
+on restart ([ADR 004](docs/adr/004-api-direct-duckdb-vs-cache.md)). Rejected requests (401)
+do not count against the limit.
 
 **`GET /v1/fundos` (RF-07).** Current version of each fund/class in `dim_fundo`
 (`fl_versao_atual`), without the unknown member, ordered by `cnpj_fundo_classe`. Filters (all
@@ -267,6 +283,19 @@ The fixture suite covers null and duplicate keys, orphan keys (registry and fact
 RN-01, RN-02 (negative flow, future date, date outside the reference month) and an SCD2 overlap;
 the case -> failing tests table is in [docs/testing.md](docs/testing.md).
 
+**API integration tests (task 5.6).** Unit tests (`make test`) use a hand-built synthetic DuckDB;
+the integration tests build a **test warehouse with the real dbt project** from synthetic raw
+rows (`tests/fixtures/warehouse/`, synthetic CNPJs only) and call every endpoint end to end with
+httpx, cross-checking the values with direct queries on the marts:
+
+```bash
+make test-integration  # dbt build of the test warehouse (~1 min) + pytest -m integration
+python scripts/build_test_warehouse.py --output data/test_warehouse.duckdb  # warehouse only
+```
+
+They are marked `integration`, excluded from plain `pytest` and run in the CI job
+`api-integration`; details in [docs/testing.md](docs/testing.md#api-integration-tests).
+
 ## Stack
 
 | Layer | Technology | Why |
@@ -293,7 +322,8 @@ curl localhost:8000/health                               # health check
 ```
 
 The API serves `/health`, `GET /v1/fundos` (RF-07), `GET /v1/fundos/{cnpj}/serie` (RF-08) and
-`GET /v1/rankings/captacao` (RF-09); the `X-API-Key` header and rate limit arrive with RF-10.
+`GET /v1/rankings/captacao` (RF-09); the `/v1/*` routes require the `X-API-Key` header and are
+rate limited per key (RF-10, see [API](#api)).
 
 **Loading the sources (RF-01).** No data from P1 yet? Load straight from the CVM open data
 (R-P3-01) into `data/warehouse.duckdb` (override with `DUCKDB_PATH`), then check the sources:
@@ -365,7 +395,7 @@ or the loader: **https://thalesreiser.github.io/dbt-dw-api/** (task 7.3).
 |---|---|---|
 | `dbt build` | no failures | — |
 | Marts documented and tested | 100% | — |
-| p95 of time-series endpoints | below 300 ms | — |
+| p95 of time-series endpoints | below 300 ms | 232 ms locally (laptop, 1 CVM month, 10 users); CI run pending ([performance](docs/performance.md)) |
 
 ## Documentation
 
@@ -381,6 +411,7 @@ or the loader: **https://thalesreiser.github.io/dbt-dw-api/** (task 7.3).
 | [Data source](docs/data-source.md) | CVM files, layouts, encoding and key mapping (RF-01) |
 | [Naming conventions](docs/naming-conventions.md) | Layers, model names, column prefixes and types (RNF-05) |
 | [Testing](docs/testing.md) | Negative suites: invalid data -> failing tests (RF-05) |
+| [Performance](docs/performance.md) | RNF-01 load test (locust): method, environment, p50/p95/p99, how to rerun |
 | [Dimensional model](docs/dimensional-model.md) | Star schema, grain of each fact, surrogate keys, class-or-fund resolution (RF-03) |
 | [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175, staging grain and deduplication, registry snapshot |
 

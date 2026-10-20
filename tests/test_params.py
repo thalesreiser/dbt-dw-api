@@ -3,6 +3,7 @@
 from typing import Annotated
 
 import pytest
+from conftest import api_client
 from fastapi import Depends
 from fastapi.testclient import TestClient
 
@@ -24,7 +25,7 @@ def probe(settings: Settings) -> TestClient:
     def fundo(cnpj: CnpjPath) -> dict[str, str]:
         return {"cnpj": cnpj}
 
-    return TestClient(app)
+    return api_client(app)
 
 
 def test_pagination_defaults(probe: TestClient) -> None:

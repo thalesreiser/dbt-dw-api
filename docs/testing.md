@@ -59,3 +59,50 @@ so the failures come from the injected rows and not from the fixture.
 Run one case: `python scripts/negative_fixture_tests.py --case rn02_future_date`. The failing
 rows of each test are stored by `--store-failures` in the temporary warehouse (schema
 `dbt_test__audit`), discarded at the end of the run.
+
+## API integration tests
+
+**Given** a warehouse built by the actual dbt models, **when** each endpoint is called over
+HTTP, **then** the responses have the documented shape and their numbers match the marts.
+
+Unit tests (`tests/test_*.py`, `make test`) run against a hand-built DuckDB with the marts'
+columns. The integration layer (`tests/integration/test_api_integration.py`, marker
+`integration`) closes the gap between that DDL and the real SQL:
+
+1. **Test warehouse.** `scripts/build_test_warehouse.py` loads the CSV files in
+   `tests/fixtures/warehouse/` (synthetic rows in the layout of the three CVM sources; every
+   CNPJ synthetic with valid check digits; no natural persons) into the `raw` tables, every
+   column as VARCHAR like the loader, in a new DuckDB file, then runs `dbt build` of the real
+   project on it (seeds, staging, snapshot, marts and all 206 data tests; it fails if any
+   fails). The real warehouse is never touched. A session-scoped fixture builds it once in a
+   temporary directory (~1 min, mostly dbt parsing).
+2. **Requests.** An `httpx.AsyncClient` with the ASGI transport calls the app created with
+   `create_app` (no server, no network); settings come from the environment (`DUCKDB_PATH`,
+   `API_KEY`), and every request sends the header `X-API-Key` with the module constant
+   `TEST_API_KEY`.
+3. **Cross-checks.** Direct read-only DuckDB queries on the same warehouse give the expected
+   values (current `dim_fundo` rows, `fl_informa_recente`, `fct_informe_diario` points,
+   `fct_captacao_mensal` ranking), and the daily series of a class adds up to its monthly net
+   inflows (RN-01).
+
+Fixture (current `dim_fundo` rows; latest month 2026-09):
+
+| CNPJ | Kind | Status | Reports | Net inflows 2026-08 / 2026-09 |
+|---|---|---|---|---|
+| `11222333000181` | class A1 of fund A (FIF) | normal | 2026-08, 2026-09 | 40.00 / 30.00 |
+| `11222333000262` | class A2 of fund A, two subclasses | normal | 2026-08, 2026-09 | 20.00 / 154.50 |
+| `11444777000242` | fund C (FI, no classes) | `CANCELADO` | 2026-08 only | -200.00 / - |
+| `11555666000122` | fund B (FI, no classes) | normal | 2026-09 | - / -30.00 |
+
+Cases (34 tests):
+
+| Endpoint | Cases |
+|---|---|
+| `GET /health` | 200 with the latest month of the daily fact |
+| `GET /v1/fundos` | current versions only, unknown member excluded, fund vs class rows; filters `situacao`, `informa_recente` (alone and with `situacao=CANCELADO`), `tp_fundo`, `tp_classe`, `nome`, combined; `limit`/`offset` pages, total and offset past the end; 422 on invalid filters and pagination |
+| `GET /v1/fundos/{cnpj}/serie` | default period (latest day of the CNPJ, 12 months back), explicit period, subclass roll-up (`vl_quota` null on multi-subclass days), `por_subclasse=true` against the fact rows, JSON numbers, empty list for a known CNPJ without points, 404 for an unknown CNPJ, 422 on `inicio > fim`, a range above 1,830 days and a malformed CNPJ |
+| `GET /v1/rankings/captacao` | default month against the monthly fact, full item fields, `ordem=asc`, explicit `mes` with `top`, a cancelled fund in the month it reported, 404 for a month without data, 422 on `top`, `ordem` and `mes` |
+
+Run: `make test-integration` (runs `dbt deps` first) or `pytest -m integration`. Plain `pytest`
+deselects them (`-m "not integration"` in `pyproject.toml`); CI runs them in the job
+`api-integration`.

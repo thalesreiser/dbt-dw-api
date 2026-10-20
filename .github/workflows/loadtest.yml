@@ -1,0 +1,98 @@
+name: Load test
+# RNF-01 (task 6.2): p95 of the series queries under local load. Manual only: it downloads real
+# CVM months and runs for a few minutes. Method and results: docs/performance.md.
+on:
+  workflow_dispatch:
+    inputs:
+      competencias:
+        description: Reference months to load from CVM (the series default is 12 months)
+        default: "2"
+      users:
+        description: Concurrent locust users
+        default: "20"
+      duration:
+        description: Run time (locust format, e.g. 3m)
+        default: "3m"
+      workers:
+        description: Uvicorn worker processes
+        default: "2"
+
+permissions:
+  contents: read
+
+jobs:
+  loadtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DUCKDB_PATH: data/warehouse.duckdb
+      # Task 5.5 (API key + per-key rate limit): one key for the run and a limit high enough
+      # not to measure 429 responses. Ignored by an API without authentication.
+      API_KEY: loadtest-${{ github.run_id }}
+      LOADTEST_API_KEY: loadtest-${{ github.run_id }}
+      RATE_LIMIT_REQUESTS: "1000000"
+      RATE_LIMIT_WINDOW_SECONDS: "60"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dbt,loadtest]"
+      # Same warehouse as the CI job `sources`: real CVM months, snapshot, dimensions and facts.
+      - name: Build the warehouse
+        run: |
+          make load COMPETENCIAS=${{ inputs.competencias }}
+          make marts
+      - name: Warehouse size (aggregates only)
+        run: |
+          python - <<'EOF'
+          import duckdb
+          con = duckdb.connect("data/warehouse.duckdb", read_only=True)
+          rows, months = con.execute(
+              "select count(*), count(distinct dt_mes_competencia) from marts.fct_informe_diario"
+          ).fetchone()
+          print(f"fct_informe_diario: {rows} rows, {months} months")
+          EOF
+      # CNPJs sampled at run time from the current dim_fundo versions; kept in the runner temp
+      # directory, never uploaded.
+      - name: Sample CNPJs
+        run: python scripts/loadtest_report.py sample -n 500 --out "$RUNNER_TEMP/cnpjs.txt"
+      # Production-like server: no reload, fixed workers, no access log.
+      - name: Start the API
+        run: |
+          nohup uvicorn fundos_api.main:app --host 127.0.0.1 --port 8000 \
+            --workers ${{ inputs.workers }} --no-access-log > "$RUNNER_TEMP/uvicorn.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/health && exit 0
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/uvicorn.log"
+          exit 1
+      - name: Warm-up
+        run: |
+          for c in $(head -20 "$RUNNER_TEMP/cnpjs.txt"); do
+            curl -fsS -o /dev/null -H "X-API-Key: $LOADTEST_API_KEY" \
+              "http://127.0.0.1:8000/v1/fundos/$c/serie"
+          done
+      - name: Run locust
+        env:
+          LOADTEST_CNPJS_FILE: ${{ runner.temp }}/cnpjs.txt
+        run: |
+          locust -f loadtest/locustfile.py --headless --host http://127.0.0.1:8000 \
+            -u ${{ inputs.users }} -r 5 -t ${{ inputs.duration }} --only-summary \
+            --csv "$RUNNER_TEMP/locust" --exit-code-on-error 0
+      - name: Report
+        run: |
+          mkdir -p loadtest-report
+          python scripts/loadtest_report.py report --stats "$RUNNER_TEMP/locust_stats.csv" \
+            --json loadtest-report/loadtest.json --markdown loadtest-report/loadtest.md \
+            --context "GitHub-hosted ubuntu-latest ($(nproc) vCPU), ${{ inputs.competencias }} CVM months, uvicorn ${{ inputs.workers }} workers, locust ${{ inputs.users }} users for ${{ inputs.duration }}, commit ${GITHUB_SHA::7}."
+          cat loadtest-report/loadtest.md >> "$GITHUB_STEP_SUMMARY"
+      # Aggregates only (no CNPJ, no row of the warehouse).
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: loadtest-report
+          path: loadtest-report/
+          if-no-files-found: error
+          retention-days: 30

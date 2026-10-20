@@ -5,6 +5,7 @@ from typing import Annotated
 
 import duckdb
 import pytest
+from conftest import api_client
 from fastapi import Depends
 from fastapi.testclient import TestClient
 
@@ -59,7 +60,7 @@ def _app_with_probe(settings: Settings) -> TestClient:
         return {"write": "accepted"}
 
     app.state.seen = seen
-    return TestClient(app)
+    return api_client(app)
 
 
 def test_write_through_app_connection_is_rejected_and_closed(settings: Settings) -> None:
