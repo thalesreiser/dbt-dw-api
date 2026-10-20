@@ -38,9 +38,15 @@ Out of scope:
 ## Running the API safely
 
 The API is **read-only and designed to run locally** against a local DuckDB file. It must
-**not** be exposed to the internet or to a shared network until RF-10 (API key authentication
-and rate limiting) is implemented; **RF-10 is not implemented yet**. Running it on a public host
-before that is outside the supported use of this project.
+**not** be exposed to the internet or to a shared network without a security review. RF-10 is
+implemented: every `/v1/*` route requires the `X-API-Key` header (compared in constant time;
+401 without a valid key, 503 when `API_KEY` is not configured, so the API fails closed) and is
+rate limited per key (429 with `Retry-After`). `/health`, `/docs` and `/openapi.json` are
+public. The limiter lives in process memory: it is not shared across workers, resets on
+restart, and does not throttle failed key attempts, so it is not a defence against brute force
+or denial of service. There is no TLS in the API itself: the key travels in clear text unless a
+TLS proxy sits in front. Running it on a public host is outside the supported use of this
+project.
 
 ## Secrets
 

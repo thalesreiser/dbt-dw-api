@@ -5,7 +5,7 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from conftest import CNPJ_CLASSE, CNPJ_FUNDO, build_warehouse
+from conftest import CNPJ_CLASSE, CNPJ_FUNDO, api_client, build_warehouse
 from fastapi.testclient import TestClient
 
 from fundos_api import schemas
@@ -48,7 +48,7 @@ def api(tmp_path: Path) -> TestClient:
     finally:
         con.close()
     settings = Settings(duckdb_path=path, _env_file=None)  # type: ignore[call-arg]
-    return TestClient(create_app(settings))
+    return api_client(create_app(settings))
 
 
 def _url(cnpj: str) -> str:
@@ -157,7 +157,7 @@ def test_quota_keeps_twelve_decimals(tmp_path: Path) -> None:
     finally:
         con.close()
     app = create_app(Settings(duckdb_path=path, _env_file=None))  # type: ignore[call-arg]
-    response = TestClient(app).get(_url(CNPJ_CLASSE), params={"inicio": "2026-09-01"})
+    response = api_client(app).get(_url(CNPJ_CLASSE), params={"inicio": "2026-09-01"})
     assert '"vl_quota":1.234567890123,' in response.text
 
 
@@ -224,7 +224,7 @@ def test_max_period_accepted(client: TestClient) -> None:
 
 def test_warehouse_unavailable_is_503(tmp_path: Path) -> None:
     settings = Settings(duckdb_path=tmp_path / "missing.duckdb", _env_file=None)  # type: ignore[call-arg]
-    response = TestClient(create_app(settings)).get(_url(CNPJ_CLASSE))
+    response = api_client(create_app(settings)).get(_url(CNPJ_CLASSE))
     assert response.status_code == 503
     assert "missing" not in response.text
 

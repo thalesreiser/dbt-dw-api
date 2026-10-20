@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from conftest import build_warehouse
+from conftest import api_client, build_warehouse
 from fastapi.testclient import TestClient
 
 from fundos_api.config import Settings
@@ -25,14 +25,14 @@ def test_health_ok_reports_latest_month(client: TestClient) -> None:
 
 def test_health_empty_fact_has_no_latest_month(tmp_path: Path) -> None:
     path = build_warehouse(tmp_path / "empty.duckdb", with_rows=False)
-    response = TestClient(create_app(_settings(path))).get("/health")
+    response = api_client(create_app(_settings(path))).get("/health")
     assert response.status_code == 200
     assert response.json()["latest_month"] is None
 
 
 def test_health_missing_file_is_503_and_creates_nothing(tmp_path: Path) -> None:
     path = tmp_path / "missing.duckdb"
-    response = TestClient(create_app(_settings(path))).get("/health")
+    response = api_client(create_app(_settings(path))).get("/health")
     assert response.status_code == 503
     assert response.json() == {
         "status": "unavailable",
@@ -49,7 +49,7 @@ def test_health_without_marts_is_503(tmp_path: Path) -> None:
 
     path = tmp_path / "no_marts.duckdb"
     duckdb.connect(str(path)).close()
-    response = TestClient(create_app(_settings(path))).get("/health")
+    response = api_client(create_app(_settings(path))).get("/health")
     assert response.status_code == 503
     assert response.json()["database"] == "reachable"
     assert response.json()["status"] == "unavailable"
@@ -58,7 +58,7 @@ def test_health_without_marts_is_503(tmp_path: Path) -> None:
 def test_health_not_a_database_is_503(tmp_path: Path) -> None:
     path = tmp_path / "garbage.duckdb"
     path.write_bytes(b"not a duckdb file" * 100)
-    response = TestClient(create_app(_settings(path))).get("/health")
+    response = api_client(create_app(_settings(path))).get("/health")
     assert response.status_code == 503
     assert response.json()["database"] == "unreachable"
 

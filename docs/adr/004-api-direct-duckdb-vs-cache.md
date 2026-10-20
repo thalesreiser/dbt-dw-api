@@ -42,6 +42,12 @@ missing, which would hide a misconfiguration.
   (IEEE 754 double); counts are integers. Reusable `Valor`/`Quota` types in
   `src/fundos_api/schemas.py`. Unknown query parameters are ignored, so the shared pagination
   dependency (`limit`/`offset`) combines with any filter.
+- **API key and rate limit** (2026-10-20, RF-10): the `/v1/*` routers depend on
+  `fundos_api.security.require_api_key` (`X-API-Key`, constant-time comparison, 503 when no key
+  is configured). The per-key limit is a fixed window kept in process memory, consistent with
+  this stateless single-process design: no Redis or other shared store. It is per process
+  (N uvicorn workers allow up to N times the limit) and resets on restart; a shared store
+  becomes necessary only if the API is scaled out.
 
 ## Alternatives considered
 
