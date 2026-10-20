@@ -30,8 +30,8 @@ The MIT license applies to the **code**, not to the data it processes.
 ## API usage
 
 - The API is **read-only** and designed to run locally. It must **not** be exposed to the internet without a security review.
-- Access requires an API key defined in your `.env`. Never publish that key.
-- Respect the configured rate limit. Load tests must only target your own local instance.
+- The API key and the rate limit (RF-10) are **not implemented yet**: until they are, the API has no authentication and must stay bound to `127.0.0.1` (see [SECURITY.md](SECURITY.md)). Once RF-10 lands, the key goes in your `.env` and must never be published.
+- Load tests must only target your own local instance.
 
 ## Security
 
