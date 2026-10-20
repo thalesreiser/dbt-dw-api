@@ -27,3 +27,9 @@ models:
 seeds:
   fundos_dw:
     +schema: seeds
+    # RF-05 (4.3): synthetic fixture of the network-free negative suite
+    # (scripts/negative_fixture_tests.py). Disabled unless --vars '{negative_fixture: true}', so
+    # normal `dbt seed` / `dbt build` runs never load it.
+    negative:
+      +schema: negative_fixture
+      +enabled: "{{ var('negative_fixture', false) }}"

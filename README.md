@@ -181,12 +181,37 @@ Responses carry fund and class data only: no CPF and no natural-person names (LG
 | GET | `/v1/rankings/captacao` | Top N funds by net inflows in the month | RF-09 |
 
 ```bash
-curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos?situacao=EM%20FUNCIONAMENTO&page=1&size=20"
+curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos?situacao=em%20funcionamento%20normal&tp_fundo=FIF&limit=20&offset=0"
 curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos/<FUND_CNPJ>/serie?inicio=2026-01-01&fim=2026-09-30"
 curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/rankings/captacao?mes=2026-09&top=10"
 ```
 
 Without the key the API returns **401**; above the rate limit, **429** (RF-10).
+
+**`GET /v1/fundos` (RF-07).** Current version of each fund/class in `dim_fundo`
+(`fl_versao_atual`), without the unknown member, ordered by `cnpj_fundo_classe`. Filters (all
+optional, combined with AND, bound parameters only): `situacao` (registry status
+`sit_fundo_classe`, case-insensitive, one of `CANCELADO`, `EM ANALISE`,
+`EM FUNCIONAMENTO NORMAL`, `EM LIQUIDACAO`, `EM SITUACAO ESPECIAL`, `FASE PRE-OPERACIONAL`,
+`INCORPORACAO`; anything else is **422**), `tp_fundo` (e.g. `FIF`, `FIDC`) and `tp_classe`
+(e.g. `CLASSES DE COTAS DE FUNDOS FIF`), exact and case-insensitive, and `nome` (substring of
+the legal name, at least 3 characters). **Pagination convention for the whole API:**
+`limit` (default `DEFAULT_PAGE_SIZE`, at most `MAX_PAGE_SIZE`) and `offset`, and list responses
+use the envelope `{"items": [...], "limit": 20, "offset": 0, "total": 1234}` with the total
+number of matching rows. The registry status is shown as published by CVM: the funds that are
+`CANCELADO` in the registry but still report (233 in 2026-09) are listed with
+`sit_fundo_classe = "CANCELADO"` and returned by `situacao=CANCELADO`; no "still reports" flag
+yet (the daily series of RF-08 shows their activity).
+
+`GET /v1/fundos/{cnpj}/serie` (RF-08) returns the daily points of a fund/class ordered by date
+ascending: `{"cnpj_fundo_classe": ..., "inicio": "2025-09-02", "fim": "2026-09-01", "items":
+[{"sk_data": "2026-09-01", "vl_quota": "1.600000000000", "vl_patrim_liq": "110.00", ...}]}`.
+`inicio` and `fim` (ISO dates, inclusive) are optional: `fim` defaults to the latest reported day
+of the CNPJ and `inicio` to 12 months before it; `inicio > fim` or a period above 1,830 days
+(about five years) gives **422**. Points are at class level: subclass rows are summed into their
+class as in `fct_captacao_mensal` (`vl_quota` is null on a day with more than one subclass and
+`id_subclasse` is always null). A CNPJ absent from `dim_fundo` (any version) gives **404**; a
+known CNPJ without reports in the period gives **200** with `"items": []`.
 
 **`GET /v1/rankings/captacao`** (RF-09) ranks the funds/classes of a month by net inflows
 (`vl_captc_liquida_mes` = inflows - redemptions, RN-01) from `fct_captacao_mensal`. Parameters:
@@ -218,6 +243,17 @@ invalid `mes`, `top` or `ordem` gives **422**.
 
 CI fails if any test in `dbt build` fails (RNF-02). There is also a **negative test**: invalid data inserted on purpose must make a test fail, proving that the tests actually work.
 
+**Negative tests (RF-05).** Two suites prove that the tests fail on invalid data:
+
+```bash
+make negative-tests    # 4.1: tamper rows in a copy of the built warehouse (needs `make marts`)
+make negative-fixture  # 4.3: network-free, synthetic seeds; each case fails exactly its tests
+```
+
+The fixture suite covers null and duplicate keys, orphan keys (registry and fact -> dimension),
+RN-01, RN-02 (negative flow, future date, date outside the reference month) and an SCD2 overlap;
+the case -> failing tests table is in [docs/testing.md](docs/testing.md).
+
 ## Stack
 
 | Layer | Technology | Why |
@@ -243,8 +279,8 @@ make up                                                  # start the API on loca
 curl localhost:8000/health                               # health check
 ```
 
-The endpoints `/v1/...` with the `X-API-Key` header arrive with epic 5 (RF-07 to RF-10); today
-the API only serves `/health`.
+The API serves `/health`, `GET /v1/fundos` (RF-07), `GET /v1/fundos/{cnpj}/serie` (RF-08) and
+`GET /v1/rankings/captacao` (RF-09); the `X-API-Key` header and rate limit arrive with RF-10.
 
 **Loading the sources (RF-01).** No data from P1 yet? Load straight from the CVM open data
 (R-P3-01) into `data/warehouse.duckdb` (override with `DUCKDB_PATH`), then check the sources:
@@ -328,6 +364,7 @@ the artifact `dbt-docs` of the `sources` job (publication on GitHub Pages: task 
 | [06 - Traceability](docs/06-traceability.md) | Requirement → component → test |
 | [Data source](docs/data-source.md) | CVM files, layouts, encoding and key mapping (RF-01) |
 | [Naming conventions](docs/naming-conventions.md) | Layers, model names, column prefixes and types (RNF-05) |
+| [Testing](docs/testing.md) | Negative suites: invalid data -> failing tests (RF-05) |
 | [Dimensional model](docs/dimensional-model.md) | Star schema, grain of each fact, surrogate keys, class-or-fund resolution (RF-03) |
 | [ADRs](docs/adr/) | DuckDB vs Athena, star schema vs wide table, incremental vs table, API cache, registry after Resolution 175, staging grain and deduplication, registry snapshot |
 
