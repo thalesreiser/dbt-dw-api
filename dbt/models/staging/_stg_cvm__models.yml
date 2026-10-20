@@ -17,6 +17,29 @@ models:
       # RF-05 (2.3): the report date falls in the reference month of the file it came from.
       - dbt_utils.expression_is_true:
           expression: "date_trunc('month', dt_competencia) = dt_mes_competencia"
+      # RF-05 (4.1) / RN-02: money in BRL as decimals (never float), dates as DATE, no
+      # report dated in the future. Named so scripts/negative_tests.py can assert them.
+      - columns_data_type:
+          name: rn02_stg_informe_diario_money_is_decimal
+          columns: [vl_total, vl_patrim_liq, vl_captc_dia, vl_resg_dia]
+          data_type: "DECIMAL(18,2)"
+      - columns_data_type:
+          name: rn02_stg_informe_diario_quota_is_decimal
+          columns: [vl_quota]
+          data_type: "DECIMAL(27,12)"
+      - columns_data_type:
+          name: rn02_stg_informe_diario_dates_are_date
+          columns: [dt_competencia, dt_mes_competencia]
+          data_type: "DATE"
+      - dbt_utils.expression_is_true:
+          name: rn02_stg_informe_diario_no_future_date
+          expression: "dt_competencia <= current_date"
+      - dbt_utils.expression_is_true:
+          name: rn02_stg_informe_diario_date_in_reference_month
+          expression: "dt_competencia between dt_mes_competencia and last_day(dt_mes_competencia)"
+      - dbt_utils.expression_is_true:
+          name: rn02_stg_informe_diario_flows_not_negative
+          expression: "coalesce(vl_captc_dia, 0) >= 0 and coalesce(vl_resg_dia, 0) >= 0"
     columns:
       - name: cnpj_fundo_classe
         description: >
