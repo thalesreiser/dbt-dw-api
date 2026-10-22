@@ -317,7 +317,7 @@ push to a PR cancels its superseded run. Four jobs run in parallel (typical dura
 
 | Job | What it runs | Data | Typical |
 |---|---|---|---|
-| `lint-test` | ruff, black, mypy; `dbt parse` (YAML/Jinja errors fail early); unit tests with coverage | synthetic DuckDB built by the tests | < 1 min |
+| `lint-test` | ruff, black, mypy; `dbt parse` (YAML/Jinja errors fail early); unit tests with coverage | synthetic DuckDB built by the tests | ~1 min |
 | `negative-fixture` | network-free negative suite: clean case passes every dbt test, each invalid case fails exactly its tests | synthetic seeds (`dbt/seeds/negative/`) | ~3.5 min |
 | `sources` | load, freshness, row counts, staging, snapshot, marts, docs coverage, incremental idempotency, negative tests, SCD2 simulation | **two real CVM months** downloaded in the job | ~2.5 min |
 | `api-integration` | `dbt build` of the test warehouse (the "sample": every model and dbt test), 34 integration tests, Schemathesis contract tests | synthetic raw rows (`tests/fixtures/warehouse/`) | ~1 min |
