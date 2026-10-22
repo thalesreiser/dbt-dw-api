@@ -25,7 +25,7 @@ from fastapi.exceptions import RequestValidationError
 
 from fundos_api.config import Settings
 from fundos_api.db import get_connection, get_settings_from_app
-from fundos_api.params import CnpjPath
+from fundos_api.params import CnpjPath, IsoDate
 from fundos_api.schemas import ErrorResponse, PontoSerie, SerieFundo
 
 # About five years of calendar days (including leap days): bounds the scan of one request.
@@ -74,15 +74,21 @@ def _check_period(inicio: date, fim: date) -> None:
 
 
 def months_before(day: date, months: int) -> date:
-    """`day` shifted back by `months`, clamped to the last day of a shorter month."""
+    """`day` shifted back by `months`, clamped to the last day of a shorter month.
+
+    Clamped to `date.min` when the shift would fall before year 1 (found by Schemathesis: a
+    `fim` in year 1 gave a 500).
+    """
     year, month0 = divmod(day.year * 12 + day.month - 1 - months, 12)
+    if year < 1:
+        return date.min
     month = month0 + 1
     return date(year, month, min(day.day, monthrange(year, month)[1]))
 
 
 def default_inicio(fim: date) -> date:
-    """First day of the default 12-month window ending on `fim` (inclusive)."""
-    return months_before(fim, DEFAULT_PERIODO_MESES) + timedelta(days=1)
+    """First day of the default 12-month window ending on `fim` (inclusive), never after it."""
+    return min(months_before(fim, DEFAULT_PERIODO_MESES) + timedelta(days=1), fim)
 
 
 def _rows(cursor: duckdb.DuckDBPyConnection) -> list[dict[str, Any]]:
@@ -100,11 +106,11 @@ def serie_fundo(
     con: Annotated[duckdb.DuckDBPyConnection, Depends(get_connection)],
     settings: Annotated[Settings, Depends(get_settings_from_app)],
     inicio: Annotated[
-        date | None,
+        IsoDate | None,
         Query(description="First day (inclusive). Default: 12 months before `fim`."),
     ] = None,
     fim: Annotated[
-        date | None,
+        IsoDate | None,
         Query(description="Last day (inclusive). Default: latest reported day of the CNPJ."),
     ] = None,
     por_subclasse: Annotated[

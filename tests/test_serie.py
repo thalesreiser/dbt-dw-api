@@ -247,6 +247,13 @@ def test_months_before_clamps_month_end() -> None:
     assert default_inicio(date(2026, 3, 31)) == date(2025, 4, 1)
 
 
+def test_months_before_clamps_to_date_min() -> None:
+    # Found by the contract tests (6.1): a `fim` in year 1 used to raise (500).
+    assert months_before(date(1, 6, 15), 12) == date.min
+    assert default_inicio(date(1, 6, 15)) == date(1, 1, 2)
+    assert default_inicio(date.min) == date.min
+
+
 def test_openapi_documents_route() -> None:
     spec = create_app(Settings(_env_file=None)).openapi()  # type: ignore[call-arg]
     operation = spec["paths"]["/v1/fundos/{cnpj}/serie"]["get"]

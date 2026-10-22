@@ -7,19 +7,29 @@ on:
 permissions:
   contents: read
 
+# Task 7.1: a new push to a PR cancels its superseded run; runs on main always complete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # RNF-02 (7.1): fast gate. `dbt parse` runs right after lint, before the unit tests, so YAML and
+  # Jinja errors fail in under a minute, before the heavy jobs.
   lint-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - run: pip install -e ".[dev,dbt]"
       - run: make lint
+      - name: dbt parse
+        run: make deps && dbt parse --project-dir dbt --profiles-dir dbt
       - run: make test
-      - run: make deps && dbt parse --project-dir dbt --profiles-dir dbt
-      # Task 7.1: dbt build on a sample + Schemathesis against the OpenAPI spec
 
   # RF-05 acceptance (4.3): network-free negative suite. Synthetic seeds (dbt/seeds/negative/)
   # replace the CVM data; the clean case passes every test and each invalid case (null and
@@ -32,6 +42,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - run: pip install -e ".[dbt]"
       - name: Negative suite on synthetic seeds
         run: make negative-fixture
@@ -49,6 +61,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - run: pip install -e ".[dbt]"
       # Two months (RF-03, 3.3): monthly net inflows per month and an incremental fact over more
       # than one reference month.
@@ -108,7 +122,9 @@ jobs:
   # Task 5.6: API integration tests. A test warehouse is built by the real dbt project (models,
   # snapshot and every dbt test) from synthetic raw rows (tests/fixtures/warehouse/), then every
   # endpoint is called through httpx (ASGI transport) and checked against the marts. No network
-  # besides `dbt deps`.
+  # besides `dbt deps`. RNF-02 (7.1): this is the "dbt build on a sample" (any failing dbt test
+  # fails the build and the job) plus the Schemathesis contract run; not a required check yet,
+  # so it must be green before merging (README, "Continuous integration").
   api-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -117,6 +133,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - run: pip install -e ".[dev,dbt]"
       - name: API integration tests over the test warehouse
         run: make test-integration
+      - name: OpenAPI contract tests (Schemathesis, task 6.1)
+        run: make test-contract
