@@ -324,7 +324,9 @@ push to a PR cancels its superseded run. Four jobs run in parallel (typical dura
 
 **RNF-02: a failing dbt test fails CI.** Every `dbt build`/`dbt test` runs through plain `make`
 recipes or `subprocess` with the exit code checked, so an `error` test fails the step and the
-job (proved in the PR of task 7.1 with a deliberately failing test). `--warn-error` is **not**
+job (proved in PR #42 with a deliberately failing test: red `sources`, `negative-fixture` and
+`api-integration`). `sources` builds selections (`staging`, `+marts`...), so a singular test
+that references no model runs only in the two synthetic jobs, which run a full `dbt build`. `--warn-error` is **not**
 used: the tests declared `severity: warn` flag known quirks of the real CVM data (reported, not
 blocking); every other test is an error.
 
