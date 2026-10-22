@@ -12,7 +12,8 @@ from fundos_api.schemas import ErrorResponse, RankingCaptacao, RankingCaptacaoIt
 
 router = APIRouter(tags=["rankings"])
 
-MONTH_PATTERN = r"^\d{4}-(0[1-9]|1[0-2])$"
+# Years 1000-9999: `0000-01` is not a valid date (it gave a 500 before task 6.1).
+MONTH_PATTERN = r"^[1-9]\d{3}-(0[1-9]|1[0-2])$"
 MAX_TOP = 100
 
 # Fixed SQL fragments chosen from a whitelist; user input never reaches the SQL text.
