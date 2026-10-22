@@ -13,12 +13,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
 from typing import Any
 
 SITUACAO = "em%20funcionamento%20normal"
+CNPJ_IN_PATH = re.compile(r"/\d{14}/")
 
 
 def mask(value: Any) -> Any:
@@ -54,7 +56,7 @@ def get(base_url: str, path: str, api_key: str | None) -> tuple[int, Any]:
 def check(base_url: str, path: str, api_key: str | None, expected: int) -> Any:
     """Call `path`, print the masked response and fail unless the status is `expected`."""
     status, body = get(base_url, path, api_key)
-    shown = path.replace(SITUACAO, "...") if "cnpj" not in path else path
+    shown = CNPJ_IN_PATH.sub("/<cnpj>/", path)
     print(f"GET {shown} -> {status}")
     print(json.dumps(mask(body), ensure_ascii=False, indent=1))
     if status != expected:
@@ -85,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
     cnpj = ranking["items"][0]["cnpj_fundo_classe"]
     serie = check(base, f"/v1/fundos/{cnpj}/serie", api_key, 200)
     assert serie["items"], "empty series for the ranking leader"
-    assert check(base, "/v1/fundos/00000000000000/serie", api_key, 404)["detail"]
+    assert check(base, "/v1/fundos/99999999999999/serie", api_key, 404)["detail"]
 
     assert check(base, "/v1/fundos?limit=2", None, 401)["detail"] == "missing X-API-Key header"
     assert check(base, "/v1/fundos?limit=2", "wrong-key", 401)["detail"] == "invalid API key"

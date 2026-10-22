@@ -123,8 +123,8 @@ jobs:
   # snapshot and every dbt test) from synthetic raw rows (tests/fixtures/warehouse/), then every
   # endpoint is called through httpx (ASGI transport) and checked against the marts. No network
   # besides `dbt deps`. RNF-02 (7.1): this is the "dbt build on a sample" (any failing dbt test
-  # fails the build and the job) plus the Schemathesis contract run; not a required check yet,
-  # so it must be green before merging (README, "Continuous integration").
+  # fails the build and the job) plus the Schemathesis contract run; a required check
+  # (README, "Continuous integration").
   api-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -160,9 +160,13 @@ jobs:
         run: make up COMPETENCIAS=1
       - name: README examples
         run: python3 scripts/compose_smoke.py
-      - name: Compose logs
+      # The dbt summary always; the API access log (CNPJs in paths) only when something failed.
+      - name: Warehouse build log
         if: always()
-        run: docker compose -f infra/docker-compose.yml logs --no-color --tail 80
+        run: docker compose -f infra/docker-compose.yml logs --no-color --tail 40 warehouse
+      - name: API log
+        if: failure()
+        run: docker compose -f infra/docker-compose.yml logs --no-color --tail 80 api
       - name: Tear down
         if: always()
         run: docker compose -f infra/docker-compose.yml down -v
