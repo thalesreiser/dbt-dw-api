@@ -14,6 +14,10 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # DuckDB 2 is a new major: adopt it in a dedicated PR once dbt-duckdb supports it.
+      - dependency-name: "duckdb"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
