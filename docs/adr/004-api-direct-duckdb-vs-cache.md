@@ -11,7 +11,7 @@ build`), at most once a day. The API (RF-07 to RF-09) only reads the marts: `dim
 (~82,000 rows), `fct_informe_diario` (~538,000 rows per month) and `fct_captacao_mensal`
 (~25,600 rows per month). RNF-01 targets a p95 below 300 ms on time-series queries, and RNF-03
 requires a read-only API with input validation. The API runs on one machine next to the file
-(Docker Compose mounts `data/` read-only, bound to `127.0.0.1`).
+(Docker Compose mounts the `warehouse` volume read-only and binds the port to `127.0.0.1`).
 
 DuckDB allows many read-only connections to one file, but a writer (dbt) needs the file
 unlocked; a plain `duckdb.connect(path)` also creates an empty database when the file is
@@ -71,6 +71,9 @@ missing, which would hide a misconfiguration.
   tests prove (`tests/test_db.py`).
 - A dbt build that runs while a request is open fails to get the write lock; builds are batch
   jobs and should run with the API idle or stopped.
-- The p95 target of RNF-01 must be verified by the RNF-01 load test; if it fails, the
-  first step is a shared connection with cursors, then a cache.
+- RNF-01 verified (task 6.2): series p95 54 ms on the CI reference run, 232 ms on a laptop, with
+  one connection per request. The shared-connection fallback was measured (p95 132 ms locally)
+  but not applied, and no cache was needed (`docs/performance.md`).
+- Under Docker Compose (task 7.2) the one-shot `warehouse` service writes the file and exits
+  before the `api` service starts, so the API never competes with dbt for the lock.
 - Scaling out means copies of the file on each node; acceptable for this project.
