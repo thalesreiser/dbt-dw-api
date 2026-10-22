@@ -41,8 +41,10 @@ changed, new or withdrawn rows. The other marts are small (`dim_fundo` ~82,000 r
   matching awkward. Rejected in favour of replacing the whole month.
 - **`append` with a filter on `dt_competencia > max(dt_competencia)`.** Cheapest, but loses every
   republication of the current month. Rejected.
-- **`insert_overwrite` by partition.** Not supported by dbt-duckdb 1.8; `delete+insert` by month
-  has the same effect.
+- **`insert_overwrite` by partition.** Not one of the strategies offered by dbt-duckdb (checked on
+  1.8 and again after the upgrade to 1.11); `delete+insert` by month has the same effect.
+- **`microbatch`** (dbt 1.9+). Batches by event time, but a batch is a day or a month of
+  `dt_competencia`, not a load: it would not detect that CVM republished a month. Rejected.
 
 ## Consequences
 
