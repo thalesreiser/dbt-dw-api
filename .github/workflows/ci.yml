@@ -140,3 +140,29 @@ jobs:
         run: make test-integration
       - name: OpenAPI contract tests (Schemathesis, task 6.1)
         run: make test-contract
+
+  # RNF-04 (7.2): the whole environment through Docker Compose, as a user runs it. `make up` builds
+  # the image, loads one real CVM month and runs `dbt build` in the one-shot `warehouse` service,
+  # then waits for the `api` healthcheck; the README examples are called with curl. Not a
+  # required check. Responses are logged with CNPJs and names masked (aggregates and shape only).
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create .env with a random API key
+        run: |
+          key=$(openssl rand -hex 24)
+          echo "::add-mask::$key"
+          sed "s/^API_KEY=.*/API_KEY=$key/" .env.example > .env
+          echo "API_KEY=$key" >> "$GITHUB_ENV"
+      - name: make up (CVM month + dbt build, then the API)
+        run: make up COMPETENCIAS=1
+      - name: README examples
+        run: python3 scripts/compose_smoke.py
+      - name: Compose logs
+        if: always()
+        run: docker compose -f infra/docker-compose.yml logs --no-color --tail 80
+      - name: Tear down
+        if: always()
+        run: docker compose -f infra/docker-compose.yml down -v
