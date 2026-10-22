@@ -106,3 +106,48 @@ Cases (34 tests):
 Run: `make test-integration` (runs `dbt deps` first) or `pytest -m integration`. Plain `pytest`
 deselects them (`-m "not integration"` in `pyproject.toml`); CI runs them in the job
 `api-integration`.
+
+## Contract tests (Schemathesis)
+
+**Given** the OpenAPI document the API publishes, **when** Schemathesis sends generated valid
+and invalid requests to every operation, **then** no response violates the contract (RF-11).
+
+`tests/contract/test_openapi_contract.py` (marker `contract`, Schemathesis 4 with its pytest
+integration) loads `/openapi.json` from the ASGI app (`schemathesis.openapi.from_asgi`, no
+server, no network) created over the test warehouse of the integration tests, with
+`X-API-Key` set and a rate limit high enough that 429 never interferes.
+
+- **Generation.** Positive and negative modes (wrong types, out-of-range numbers, broken
+  patterns and enums), at most 60 examples per operation and mode, deterministic
+  (`derandomize`, no example database), plus the explicit and coverage phases. The CNPJ path
+  parameter has an `openapi_examples` entry with a synthetic CNPJ of the test warehouse, so the
+  200 path of `/serie` is exercised, not only 404.
+- **Checks** (all Schemathesis defaults): `not_a_server_error`, `status_code_conformance`,
+  `content_type_conformance`, `response_schema_conformance`, `response_headers_conformance`,
+  `negative_data_rejection`, `positive_data_acceptance`, `ignored_auth` (replays requests
+  without the key: 401 expected), `missing_required_header`, `unsupported_method`.
+- **Error responses** the generator never reaches are validated by one test per case against
+  the same schema: 401 (missing and wrong key), 429 (with the `Retry-After` header schema),
+  503 for `/v1/*` with no `API_KEY` and 503 for `/health` with no warehouse.
+
+Documented exclusions (behaviour OpenAPI cannot express, not a looser schema):
+
+| Exclusion | Why |
+|---|---|
+| No extra query parameters generated (`allow_extra_parameters=False`) | Unknown query parameters are ignored by design (`params.py`), as in most HTTP APIs |
+| Security parameters not generated (`with_security_parameters=False`) | The key is always sent; `ignored_auth` still checks enforcement and the 401 test covers the error body |
+| `positive_data_acceptance` skipped only for the 422 of the `/serie` period rule | `inicio > fim` or a period over 1,830 days (explicit or with the defaults) is a cross-parameter rule; the 422 body is still validated |
+
+Violations found by the first run and fixed in the API:
+
+| Violation | Fix |
+|---|---|
+| `GET /v1/rankings/captacao?mes=0000-01` gave 500 (year 0) | `mes` pattern requires years 1000-9999 |
+| `GET /v1/fundos/{cnpj}/serie?fim=0001-...` gave 500 (default `inicio` before year 1) | default period clamped to `date.min` and never after `fim` |
+| `inicio`/`fim` accepted Unix timestamps (`fim=0` gave 200) although documented as `format: date` | strict `YYYY-MM-DD` (`params.IsoDate`) |
+| `situacao` enum only in the description: documented-valid strings got 422 | declared as an `enum` in the schema (lower case still tolerated) |
+| `limit` documented up to 1,000 but rejected above `MAX_PAGE_SIZE` (500) | OpenAPI `maximum` of `limit` set to the configured `MAX_PAGE_SIZE` |
+
+Result: 4 operations, positive and negative generation, 0 violations; about 40 s locally on top of
+the test warehouse build. Run: `make test-contract` or `pytest -m contract --no-cov` (set
+`TEST_WAREHOUSE_PATH` to reuse a build); CI runs it in the job `api-integration`.
