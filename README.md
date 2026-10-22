@@ -309,6 +309,33 @@ TEST_WAREHOUSE_PATH=data/test_warehouse.duckdb pytest -m contract --no-cov  # re
 Marked `contract`, excluded from plain `pytest`, run in the CI job `api-integration`; details in
 [docs/testing.md](docs/testing.md#contract-tests-schemathesis).
 
+## Continuous integration
+
+Every pull request and every push to `main` runs [`ci.yml`](.github/workflows/ci.yml); a new
+push to a PR cancels its superseded run. Four jobs run in parallel (typical durations on
+`ubuntu-latest`, pip cache warm):
+
+| Job | What it runs | Data | Typical |
+|---|---|---|---|
+| `lint-test` | ruff, black, mypy; `dbt parse` (YAML/Jinja errors fail early); unit tests with coverage | synthetic DuckDB built by the tests | ~1 min |
+| `negative-fixture` | network-free negative suite: clean case passes every dbt test, each invalid case fails exactly its tests | synthetic seeds (`dbt/seeds/negative/`) | ~3.5 min |
+| `sources` | load, freshness, row counts, staging, snapshot, marts, docs coverage, incremental idempotency, negative tests, SCD2 simulation | **two real CVM months** downloaded in the job | ~2.5 min |
+| `api-integration` | `dbt build` of the test warehouse (the "sample": every model and dbt test), 34 integration tests, Schemathesis contract tests | synthetic raw rows (`tests/fixtures/warehouse/`) | ~1 min |
+
+**RNF-02: a failing dbt test fails CI.** Every `dbt build`/`dbt test` runs through plain `make`
+recipes or `subprocess` with the exit code checked, so an `error` test fails the step and the
+job (proved in PR #42 with a deliberately failing test: red `sources`, `negative-fixture` and
+`api-integration`). `sources` builds selections (`staging`, `+marts`...), so a singular test
+that references no model runs only in the two synthetic jobs, which run a full `dbt build`. `--warn-error` is **not**
+used: the tests declared `severity: warn` flag known quirks of the real CVM data (reported, not
+blocking); every other test is an error.
+
+**Merge gates.** The required status checks are `lint-test`, `negative-fixture` and `sources`.
+`api-integration` (dbt build on the sample, integration and contract tests) is not required yet:
+it must be green before merging, and it should be added to the branch protection of `main`
+(Settings -> Branches -> required status checks: `api-integration`). CodeQL also runs on PRs;
+the `dbt docs` workflow builds on PRs only when it changes.
+
 ## Stack
 
 | Layer | Technology | Why |
