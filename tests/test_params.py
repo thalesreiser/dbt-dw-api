@@ -71,3 +71,36 @@ def test_cnpj_invalid_is_422(probe: TestClient, cnpj: str) -> None:
     response = probe.get(f"/_fundo/{cnpj}")
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["path", "cnpj"]
+
+
+def test_openapi_limit_maximum_is_the_configured_page_size(settings: Settings) -> None:
+    """Contract (6.1): the documented `limit` maximum is `MAX_PAGE_SIZE`, not the hard cap."""
+    app = create_app(settings.model_copy(update={"max_page_size": 200}))
+    document = app.openapi()
+    (limit,) = [
+        p for p in document["paths"]["/v1/fundos"]["get"]["parameters"] if p["name"] == "limit"
+    ]
+    assert [o["maximum"] for o in limit["schema"]["anyOf"] if "maximum" in o] == [200]
+    assert app.openapi() is document
+
+
+@pytest.mark.parametrize("value", ["0", "1700000000", "2026-9-1", "2026-09-01T00:00:00"])
+def test_serie_dates_must_be_iso(client: TestClient, value: str) -> None:
+    """Contract (6.1): `format: date` only; Unix timestamps were accepted before."""
+    response = client.get(f"/v1/fundos/11222333000181/serie?fim={value}")
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["query", "fim"]
+
+
+def test_month_zero_is_422(client: TestClient) -> None:
+    """Contract (6.1): `mes=0000-01` gave a 500 (year 0 is not a date)."""
+    assert client.get("/v1/rankings/captacao?mes=0000-01").status_code == 422
+
+
+def test_openapi_situacao_is_an_enum(client: TestClient) -> None:
+    params = client.get("/openapi.json").json()["paths"]["/v1/fundos"]["get"]["parameters"]
+    (situacao,) = [p for p in params if p["name"] == "situacao"]
+    enum = situacao["schema"].get("enum") or next(
+        o["enum"] for o in situacao["schema"]["anyOf"] if "enum" in o
+    )
+    assert "CANCELADO" in enum and "EM FUNCIONAMENTO NORMAL" in enum

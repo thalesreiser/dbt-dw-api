@@ -5,6 +5,7 @@ Run with `uvicorn fundos_api.main:app` (or `make api`).
 
 import logging
 from datetime import date
+from typing import Any
 
 import duckdb
 from fastapi import FastAPI, Request, Response, Security, status
@@ -30,6 +31,31 @@ def latest_month(con: duckdb.DuckDBPyConnection, schema: str) -> date | None:
 def _warehouse_unavailable(request: Request, exc: Exception) -> JSONResponse:
     body = ErrorResponse(detail="warehouse unavailable")
     return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=body.model_dump())
+
+
+def _with_max_page_size(app: FastAPI, max_page_size: int) -> None:
+    """Document the configured `MAX_PAGE_SIZE` as the `limit` maximum in the OpenAPI (RF-11).
+
+    The `Query` bound is the static `HARD_MAX_PAGE_SIZE`; the effective cap is a setting, so
+    the generated document is patched once, when first built, to match what is enforced.
+    """
+    build = app.openapi
+
+    def openapi() -> dict[str, Any]:
+        if app.openapi_schema is not None:
+            return app.openapi_schema
+        document = build()
+        for path_item in document.get("paths", {}).values():
+            for operation in path_item.values():
+                for param in operation.get("parameters", []):
+                    if param.get("in") != "query" or param.get("name") != "limit":
+                        continue
+                    for option in [param["schema"], *param["schema"].get("anyOf", [])]:
+                        if "maximum" in option:
+                            option["maximum"] = max_page_size
+        return document
+
+    app.openapi = openapi  # type: ignore[method-assign]
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -73,6 +99,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             dependencies=[Security(require_api_key)],
             responses=AUTH_RESPONSES,
         )
+    _with_max_page_size(app, config.max_page_size)
     return app
 
 

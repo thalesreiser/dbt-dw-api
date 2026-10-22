@@ -41,6 +41,9 @@ def _situacao(
         str | None,
         Query(
             max_length=40,
+            # Declared as an enum so the OpenAPI contract matches what is accepted (RF-11);
+            # lower case and surrounding spaces are tolerated as well.
+            json_schema_extra={"enum": sorted(SITUACOES)},
             description="Registry status (`sit_fundo_classe`), case-insensitive: "
             + ", ".join(sorted(SITUACOES))
             + ".",
