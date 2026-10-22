@@ -216,7 +216,7 @@ filters on it with `informa_recente`.
 `int_fundo_classe__unificado` (now a view, schema `intermediate`) is snapshotted by
 `snp_cvm__fundo_classe` (schema `snapshots`; `unique_key = cnpj_fundo_classe`, `check`
 strategy on every attribute: names, registry ids, status, types, classifications,
-administrator, manager, registration date; `invalidate_hard_deletes = false`, so a CNPJ that
+administrator, manager, registration date; `hard_deletes = ignore`, so a CNPJ that
 leaves the registry keeps its last version open). `dim_fundo` reads the snapshot and exposes
 `dt_valido_de` / `dt_valido_ate` (dates of `dbt_valid_from` / `dbt_valid_to`, null for the
 current version) and `fl_versao_atual`. The registry has no history before the first snapshot,

@@ -52,3 +52,14 @@ half-open interval `dt >= dt_valido_de and (dt_valido_ate is null or dt < dt_val
   opens a new version; intraday changes are not kept.
 - Removals from the registry are not visible in `dim_fundo`; if they matter later, switch to
   `invalidate_hard_deletes = true` and resolve facts of closed CNPJs to their last version.
+
+## Note (2026-10-22): dbt 1.11 upgrade
+
+The decision is unchanged; only its spelling moved. The snapshot is now defined in YAML
+(`dbt/snapshots/_snapshots.yml`, `relation: ref('int_fundo_classe__unificado')`, dbt >= 1.9)
+instead of a SQL snapshot block, and `hard_deletes: ignore` replaces the deprecated
+`invalidate_hard_deletes = false` (same behaviour: a CNPJ that leaves the registry keeps its last
+version open). `target_schema` became `schema: snapshots`, which `generate_schema_name` keeps
+as-is. `dbt_valid_from` / `dbt_valid_to` keep their names and semantics (`dbt_valid_to` is null
+for the current version; `dbt_valid_to_current` is not set). The rows, columns and types of the
+snapshot were compared before and after the upgrade on the same warehouse copy and are identical.
