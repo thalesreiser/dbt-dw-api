@@ -16,19 +16,21 @@ seeds:
         dt_feriado: date
         nm_feriado: varchar
         tp_feriado: varchar
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [dt_feriado, nm_feriado]
+          arguments:
+            combination_of_columns: [dt_feriado, nm_feriado]
     columns:
       - name: dt_feriado
         description: Date of the holiday.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nm_feriado
         description: Name of the holiday (pt-BR, without accents).
-        tests: [not_null]
+        data_tests: [not_null]
       - name: tp_feriado
         description: "`FIXO` (fixed date) or `MOVEL` (Easter-based)."
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["FIXO", "MOVEL"]
+              arguments:
+                values: ["FIXO", "MOVEL"]

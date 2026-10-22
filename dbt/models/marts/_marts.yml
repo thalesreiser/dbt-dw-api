@@ -17,28 +17,33 @@ models:
       The first version of every CNPJ starts at 1900-01-01; versions of one CNPJ are contiguous
       and never overlap, and exactly one is current. Registry status is shown as-is: a fund that
       is `CANCELADO` in the registry but still reports keeps that status.
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [cnpj_fundo_classe, dt_valido_de]
+          arguments:
+            combination_of_columns: [cnpj_fundo_classe, dt_valido_de]
       - dbt_utils.expression_is_true:
-          expression: "fl_versao_atual = (dt_valido_ate is null)"
+          arguments:
+            expression: "fl_versao_atual = (dt_valido_ate is null)"
       - dbt_utils.expression_is_true:
-          expression: "dt_valido_ate is null or dt_valido_ate > dt_valido_de"
+          arguments:
+            expression: "dt_valido_ate is null or dt_valido_ate > dt_valido_de"
       - dbt_utils.expression_is_true:
-          expression: "(tp_registro = 'CLASSE') = (id_registro_classe is not null)"
+          arguments:
+            expression: "(tp_registro = 'CLASSE') = (id_registro_classe is not null)"
       - dbt_utils.expression_is_true:
-          expression: "tp_registro <> 'DESCONHECIDO' or not fl_informa_recente"
+          arguments:
+            expression: "tp_registro <> 'DESCONHECIDO' or not fl_informa_recente"
     columns:
       - name: sk_fundo
         description: >
           Surrogate key: `dbt_utils.generate_surrogate_key(['cnpj_fundo_classe', 'dt_valido_de'])`
           (MD5); one per version.
-        tests: [not_null, unique]
+        data_tests: [not_null, unique]
       - name: cnpj_fundo_classe
         description: >
           Natural key: reporting CNPJ (class CNPJ, else fund CNPJ); `00000000000000` for the
           unknown member. Unique among current versions.
-        tests:
+        data_tests:
           - not_null
           - valid_cnpj
           - unique:
@@ -46,10 +51,11 @@ models:
                 where: "fl_versao_atual"
       - name: tp_registro
         description: "`CLASSE`, `FUNDO` (fund-only row) or `DESCONHECIDO` (unknown member)."
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["CLASSE", "FUNDO", "DESCONHECIDO"]
+              arguments:
+                values: ["CLASSE", "FUNDO", "DESCONHECIDO"]
       - name: id_registro_classe
         description: CVM registry id of the class; null for fund-only rows and the unknown member.
       - name: id_registro_fundo
@@ -58,7 +64,7 @@ models:
         description: CNPJ of the fund (the parent fund for class rows); groups classes by fund.
       - name: nm_denominacao_social
         description: Legal name of the class, else of the fund.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nm_denominacao_social_fundo
         description: Legal name of the fund.
       - name: tp_fundo
@@ -69,7 +75,7 @@ models:
         description: >
           Registry status of the class, else of the fund (`DESCONHECIDO` for the unknown
           member), as published by CVM.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: sit_fundo
         description: Registry status of the fund.
       - name: tp_classificacao
@@ -98,19 +104,20 @@ models:
           (`max(dt_mes_competencia)` of `stg_cvm__informe_diario`, the rows of
           `fct_informe_diario`); same value on every version of the CNPJ, false for the unknown
           member. Tells apart a `CANCELADO` fund that still reports.
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: [true, false]
-              quote: false
+              arguments:
+                values: [true, false]
+                quote: false
       - name: dt_valido_de
         description: "{{ doc('dt_valido_de') }}"
-        tests: [not_null]
+        data_tests: [not_null]
       - name: dt_valido_ate
         description: "{{ doc('dt_valido_ate') }}"
       - name: fl_versao_atual
         description: "{{ doc('fl_versao_atual') }}"
-        tests: [not_null]
+        data_tests: [not_null]
 
   - name: dim_data
     description: >
@@ -122,54 +129,57 @@ models:
     columns:
       - name: sk_data
         description: "{{ doc('sk_data') }}"
-        tests: [not_null, unique]
+        data_tests: [not_null, unique]
       - name: sk_mes
         description: First day of the month of `sk_data`; the key `fct_captacao_mensal.sk_mes` uses.
-        tests:
+        data_tests:
           - not_null
           - relationships:
-              to: ref('dim_data')
-              field: sk_data
+              arguments:
+                to: ref('dim_data')
+                field: sk_data
       - name: nr_ano
         description: Year.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nr_trimestre
         description: Quarter (1-4).
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: [1, 2, 3, 4]
-              quote: false
+              arguments:
+                values: [1, 2, 3, 4]
+                quote: false
       - name: nr_mes
         description: Month (1-12).
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nr_dia
         description: Day of the month.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nr_dia_semana
         description: ISO weekday, 1 = Monday ... 7 = Sunday.
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: [1, 2, 3, 4, 5, 6, 7]
-              quote: false
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7]
+                quote: false
       - name: dt_inicio_mes
         description: First day of the month.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: dt_fim_mes
         description: Last day of the month.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: fl_fim_de_semana
         description: True on Saturdays and Sundays.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: fl_feriado
         description: True on a national holiday of the seed `feriados_nacionais`.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nm_feriado
         description: Name of the holiday (names joined with ` / ` when two share a date); null otherwise.
       - name: fl_dia_util
         description: "Business day: not a weekend and not a national holiday."
-        tests: [not_null]
+        data_tests: [not_null]
 
   - name: fct_informe_diario
     description: >
@@ -179,61 +189,72 @@ models:
       dt_mes_competencia`); a run rebuilds every month whose load (`_loaded_at`) is new or
       changed, so the month CVM republishes is replaced as a whole. `sk_fundo` is the
       `dim_fundo` version of the CNPJ valid on the report date, else the unknown member.
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [cnpj_fundo_classe, id_subclasse, sk_data]
+          arguments:
+            combination_of_columns: [cnpj_fundo_classe, id_subclasse, sk_data]
       - dbt_utils.expression_is_true:
-          expression: "dt_mes_competencia = date_trunc('month', sk_data)"
+          arguments:
+            expression: "dt_mes_competencia = date_trunc('month', sk_data)"
       # RF-05 (4.1): RN-01 at the daily grain; RN-02 types, signs and dates. Named so
       # scripts/negative_tests.py can assert them.
       - net_inflow:
           name: rn01_fct_informe_diario_net_inflow
-          net: vl_captc_liquida_dia
-          inflow: vl_captc_dia
-          redemption: vl_resg_dia
+          arguments:
+            net: vl_captc_liquida_dia
+            inflow: vl_captc_dia
+            redemption: vl_resg_dia
       - columns_data_type:
           name: rn02_fct_informe_diario_money_is_decimal
-          columns: [vl_total, vl_patrim_liq, vl_captc_dia, vl_resg_dia, vl_captc_liquida_dia]
-          data_type: "DECIMAL(%,2)"
+          arguments:
+            columns: [vl_total, vl_patrim_liq, vl_captc_dia, vl_resg_dia, vl_captc_liquida_dia]
+            data_type: "DECIMAL(%,2)"
       - columns_data_type:
           name: rn02_fct_informe_diario_quota_is_decimal
-          columns: [vl_quota]
-          data_type: "DECIMAL(%,12)"
+          arguments:
+            columns: [vl_quota]
+            data_type: "DECIMAL(%,12)"
       - columns_data_type:
           name: rn02_fct_informe_diario_dates_are_date
-          columns: [sk_data, dt_mes_competencia]
-          data_type: "DATE"
+          arguments:
+            columns: [sk_data, dt_mes_competencia]
+            data_type: "DATE"
       - dbt_utils.expression_is_true:
           name: rn02_fct_informe_diario_no_future_date
-          expression: "sk_data <= current_date"
+          arguments:
+            expression: "sk_data <= current_date"
       - dbt_utils.expression_is_true:
           name: rn02_fct_informe_diario_flows_not_negative
-          expression: "coalesce(vl_captc_dia, 0) >= 0 and coalesce(vl_resg_dia, 0) >= 0"
+          arguments:
+            expression: "coalesce(vl_captc_dia, 0) >= 0 and coalesce(vl_resg_dia, 0) >= 0"
       - dbt_utils.recency:
           name: rf05_fct_informe_diario_recency
-          datepart: month
-          field: sk_data
-          interval: 3
+          arguments:
+            datepart: month
+            field: sk_data
+            interval: 3
           config:
             severity: warn
     columns:
       - name: sk_fundo
         description: "{{ doc('sk_fundo_fk') }} Here the fact date is `sk_data`."
-        tests:
+        data_tests:
           - not_null
           - relationships:
-              to: ref('dim_fundo')
-              field: sk_fundo
+              arguments:
+                to: ref('dim_fundo')
+                field: sk_fundo
       - name: sk_data
         description: FK to `dim_data`; the report date (`dt_competencia`).
-        tests:
+        data_tests:
           - not_null
           - relationships:
-              to: ref('dim_data')
-              field: sk_data
+              arguments:
+                to: ref('dim_data')
+                field: sk_data
       - name: cnpj_fundo_classe
         description: "Degenerate natural key. {{ doc('cnpj_fundo_classe') }}"
-        tests: [not_null, valid_cnpj]
+        data_tests: [not_null, valid_cnpj]
       - name: id_subclasse
         description: Degenerate dimension; subclass id, null when the report is at class level.
       - name: vl_total
@@ -248,15 +269,15 @@ models:
         description: Redemptions of the day (BRL); additive.
       - name: vl_captc_liquida_dia
         description: "Net inflows of the day (BRL): `vl_captc_dia - vl_resg_dia`. {{ doc('rn_01_captacao_liquida') }}"
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nr_cotst
         description: Number of shareholders; semi-additive (may count an investor more than once across classes).
       - name: dt_mes_competencia
         description: Reference month (first day); the unit the incremental run replaces.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: _loaded_at
         description: "{{ doc('_loaded_at') }}"
-        tests: [not_null]
+        data_tests: [not_null]
 
   - name: fct_captacao_mensal
     description: >
@@ -264,77 +285,90 @@ models:
       month (`cnpj_fundo_classe`, `sk_mes`); subclass rows are rolled up into their class. Built
       from `fct_informe_diario` as a table. `sk_fundo` is the version valid on the last
       reported day of the month.
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [cnpj_fundo_classe, sk_mes]
+          arguments:
+            combination_of_columns: [cnpj_fundo_classe, sk_mes]
       - dbt_utils.expression_is_true:
-          expression: "vl_captc_liquida_mes = vl_captc_mes - vl_resg_mes"
+          arguments:
+            expression: "vl_captc_liquida_mes = vl_captc_mes - vl_resg_mes"
       - dbt_utils.expression_is_true:
-          expression: "dt_ultimo_informe >= sk_mes and dt_ultimo_informe <= last_day(sk_mes)"
+          arguments:
+            expression: "dt_ultimo_informe >= sk_mes and dt_ultimo_informe <= last_day(sk_mes)"
       # RF-05 (4.1): RN-01 at the monthly grain; RN-02 types, signs and dates. Named so
       # scripts/negative_tests.py can assert them.
       - net_inflow:
           name: rn01_fct_captacao_mensal_net_inflow
-          net: vl_captc_liquida_mes
-          inflow: vl_captc_mes
-          redemption: vl_resg_mes
+          arguments:
+            net: vl_captc_liquida_mes
+            inflow: vl_captc_mes
+            redemption: vl_resg_mes
       - columns_data_type:
           name: rn02_fct_captacao_mensal_money_is_decimal
-          columns: [vl_captc_mes, vl_resg_mes, vl_captc_liquida_mes, vl_patrim_liq_fim_mes]
-          data_type: "DECIMAL(%,2)"
+          arguments:
+            columns: [vl_captc_mes, vl_resg_mes, vl_captc_liquida_mes, vl_patrim_liq_fim_mes]
+            data_type: "DECIMAL(%,2)"
       - columns_data_type:
           name: rn02_fct_captacao_mensal_dates_are_date
-          columns: [sk_mes, dt_ultimo_informe]
-          data_type: "DATE"
+          arguments:
+            columns: [sk_mes, dt_ultimo_informe]
+            data_type: "DATE"
       - dbt_utils.expression_is_true:
           name: rn02_fct_captacao_mensal_month_key_is_first_day
-          expression: "sk_mes = date_trunc('month', sk_mes)"
+          arguments:
+            expression: "sk_mes = date_trunc('month', sk_mes)"
       - dbt_utils.expression_is_true:
           name: rn02_fct_captacao_mensal_no_future_date
-          expression: "dt_ultimo_informe <= current_date"
+          arguments:
+            expression: "dt_ultimo_informe <= current_date"
       - dbt_utils.expression_is_true:
           name: rn02_fct_captacao_mensal_flows_not_negative
-          expression: "vl_captc_mes >= 0 and vl_resg_mes >= 0"
+          arguments:
+            expression: "vl_captc_mes >= 0 and vl_resg_mes >= 0"
       - dbt_utils.expression_is_true:
           name: rf05_fct_captacao_mensal_days_in_month
-          expression: "nr_dias_informados between 1 and day(last_day(sk_mes))"
+          arguments:
+            expression: "nr_dias_informados between 1 and day(last_day(sk_mes))"
       - dbt_utils.fewer_rows_than:
           name: rf05_fct_captacao_mensal_fewer_rows_than_daily
-          compare_model: ref('fct_informe_diario')
+          arguments:
+            compare_model: ref('fct_informe_diario')
     columns:
       - name: sk_fundo
         description: FK to `dim_fundo`; the version valid on `dt_ultimo_informe` (unknown member when none).
-        tests:
+        data_tests:
           - not_null
           - relationships:
-              to: ref('dim_fundo')
-              field: sk_fundo
+              arguments:
+                to: ref('dim_fundo')
+                field: sk_fundo
       - name: sk_mes
         description: FK to `dim_data` (role month); first day of the reference month.
-        tests:
+        data_tests:
           - not_null
           - relationships:
-              to: ref('dim_data')
-              field: sk_data
+              arguments:
+                to: ref('dim_data')
+                field: sk_data
       - name: cnpj_fundo_classe
         description: "Degenerate natural key. {{ doc('cnpj_fundo_classe') }}"
-        tests: [not_null]
+        data_tests: [not_null]
       - name: vl_captc_mes
         description: Inflows of the month (BRL), sum of the daily values; additive.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: vl_resg_mes
         description: Redemptions of the month (BRL), sum of the daily values; additive.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: vl_captc_liquida_mes
         description: "Net inflows of the month (BRL): `vl_captc_mes - vl_resg_mes`. {{ doc('rn_01_captacao_liquida') }}"
-        tests: [not_null]
+        data_tests: [not_null]
       - name: vl_patrim_liq_fim_mes
         description: Net assets on the last reported day of the month (subclasses summed); semi-additive.
       - name: nr_cotst_fim_mes
         description: Shareholders on the last reported day of the month (subclasses summed); semi-additive.
       - name: dt_ultimo_informe
         description: Last reported day of the month.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nr_dias_informados
         description: Number of reported days in the month.
-        tests: [not_null]
+        data_tests: [not_null]

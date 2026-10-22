@@ -11,6 +11,17 @@ seed-paths: ["seeds"]
 target-path: target
 clean-targets: [target, dbt_packages]
 
+# Behaviour flags (dbt 1.11 upgrade, 2026-10-22). Set explicitly to the dbt 1.11 defaults for the
+# flags whose default changed since dbt 1.8, so a future default flip cannot change the project
+# silently. None of them changes the outputs here: no package overrides a built-in
+# materialization, no resource name has spaces, the project has no on-run hooks, and every generic
+# test passes its arguments under `arguments:`.
+flags:
+  require_explicit_package_overrides_for_builtin_materializations: true
+  require_resource_names_without_spaces: true
+  source_freshness_run_project_hooks: true
+  require_generic_test_arguments_property: true
+
 # RNF-05: staging -> intermediate -> marts layers; naming convention in docs/naming-conventions.md
 models:
   fundos_dw:

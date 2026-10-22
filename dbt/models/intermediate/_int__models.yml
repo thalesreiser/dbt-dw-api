@@ -14,38 +14,42 @@ models:
       as-is (a `CANCELADO` fund that still reports keeps that status). Materialized as a view in
       schema `intermediate` (RF-04, 3.4) because it is the input of the SCD2 snapshot
       `snp_cvm__fundo_classe`, which `dim_fundo` reads.
-    tests:
+    data_tests:
       - dbt_utils.expression_is_true:
-          expression: "(tp_registro = 'CLASSE') = (id_registro_classe is not null)"
+          arguments:
+            expression: "(tp_registro = 'CLASSE') = (id_registro_classe is not null)"
     columns:
       - name: cnpj_fundo_classe
         description: "{{ doc('cnpj_fundo_classe') }}"
-        tests: [not_null, unique, valid_cnpj]
+        data_tests: [not_null, unique, valid_cnpj]
       - name: tp_registro
         description: "`CLASSE` or `FUNDO`: which registry the row comes from."
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["CLASSE", "FUNDO"]
+              arguments:
+                values: ["CLASSE", "FUNDO"]
       - name: id_registro_classe
         description: CVM registry id of the class; null for fund-only rows.
-        tests:
+        data_tests:
           - relationships:
-              to: ref('stg_cvm__cadastro_classes')
-              field: id_registro_classe
+              arguments:
+                to: ref('stg_cvm__cadastro_classes')
+                field: id_registro_classe
       - name: id_registro_fundo
         description: CVM registry id of the fund (the parent fund for class rows).
-        tests:
+        data_tests:
           - not_null
           - relationships:
-              to: ref('stg_cvm__cadastro_fundos')
-              field: id_registro_fundo
+              arguments:
+                to: ref('stg_cvm__cadastro_fundos')
+                field: id_registro_fundo
       - name: cnpj_fundo
         description: CNPJ of the fund (the parent fund for class rows).
-        tests: [not_null, valid_cnpj]
+        data_tests: [not_null, valid_cnpj]
       - name: nm_denominacao_social
         description: Legal name of the class, else of the fund.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nm_denominacao_social_fundo
         description: Legal name of the fund.
       - name: tp_fundo
@@ -54,7 +58,7 @@ models:
         description: Class type; null for fund-only rows.
       - name: sit_fundo_classe
         description: Registry status of the class, else of the fund.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: sit_fundo
         description: Registry status of the fund.
       - name: tp_classificacao

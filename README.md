@@ -3,7 +3,7 @@
 [![CI](https://github.com/thalesreiser/dbt-dw-api/actions/workflows/ci.yml/badge.svg)](https://github.com/thalesreiser/dbt-dw-api/actions/workflows/ci.yml)
 [![dbt docs](https://img.shields.io/badge/dbt_docs-GitHub_Pages-FF694B?logo=dbt&logoColor=white)](https://thalesreiser.github.io/dbt-dw-api/)
 ![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
-![dbt](https://img.shields.io/badge/dbt-1.8-FF694B?logo=dbt&logoColor=white)
+![dbt](https://img.shields.io/badge/dbt-1.11-FF694B?logo=dbt&logoColor=white)
 ![DuckDB](https://img.shields.io/badge/DuckDB-1.1-FFF000?logo=duckdb&logoColor=black)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -341,7 +341,7 @@ the `dbt docs` workflow builds on PRs only when it changes.
 | Layer | Technology | Why |
 |---|---|---|
 | Warehouse | DuckDB (dbt-duckdb) | Zero cost, fast, reads Parquet directly |
-| Transformation | dbt Core + dbt_utils | Industry standard for analytics modeling |
+| Transformation | dbt Core 1.11 + dbt-duckdb 1.11 (same minor, pinned together) + dbt_utils | Industry standard for analytics modeling |
 | Modeling | Kimball (star schema) | Simple, fast queries |
 | API | FastAPI + Pydantic + Uvicorn | Automatic OpenAPI and input validation |
 | Tests | pytest, httpx, Schemathesis | Unit, integration and contract |
