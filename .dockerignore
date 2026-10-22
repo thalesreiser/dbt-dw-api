@@ -1,0 +1,24 @@
+# Keep secrets, data and build outputs out of the image (RNF-03, RST-01).
+.env
+.env.*
+!.env.example
+.git
+.github
+data/
+*.duckdb
+*.duckdb.wal
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/.user.yml
+**/__pycache__/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/

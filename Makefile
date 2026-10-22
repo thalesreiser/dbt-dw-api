@@ -13,8 +13,8 @@ LOAD_ARGS = --competencias $(COMPETENCIAS) $(if $(COMPETENCIA),--competencia $(C
 install:
 	pip install -e ".[dev,dbt]" && pre-commit install
 
-up:
-	docker compose -f infra/docker-compose.yml up -d --build
+up:  ## RNF-04: CVM load + dbt build (one-shot `warehouse`), then the API on 127.0.0.1:8000 (needs .env)
+	COMPETENCIAS=$(COMPETENCIAS) COMPETENCIA=$(COMPETENCIA) docker compose -f infra/docker-compose.yml up -d --build --wait --wait-timeout 900
 
 down:
 	docker compose -f infra/docker-compose.yml down

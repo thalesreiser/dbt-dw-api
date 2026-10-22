@@ -1,10 +1,61 @@
-# RNF-04: runs via Docker Compose
+# RNF-04: the whole environment with `make up` (docker compose -f infra/docker-compose.yml up).
+#   1. `warehouse` (one shot): loads COMPETENCIAS months from the CVM open data into the DuckDB
+#      file of the `warehouse` volume and runs `dbt build` (models, snapshot, seeds and tests).
+#   2. `api`: starts only if that build succeeded; reads the same volume read-only.
+# No secrets here: the API settings (API_KEY...) come from ../.env (copy of .env.example).
+name: fundos-dw
+
 services:
+  warehouse:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    image: fundos-dw-api:local
+    environment:
+      DUCKDB_PATH: /app/data/warehouse.duckdb
+      COMPETENCIAS: ${COMPETENCIAS:-1}
+      COMPETENCIA: ${COMPETENCIA:-}
+    # Same steps as `make load build`. The volume persists, so the SCD2 snapshot accumulates
+    # history across runs and the incremental fact only reprocesses changed months (ADR 003).
+    command:
+      - sh
+      - -ec
+      - >-
+        python scripts/direct_load.py --competencias "$$COMPETENCIAS"
+        $${COMPETENCIA:+--competencia "$$COMPETENCIA"}
+        && dbt build --project-dir dbt --profiles-dir dbt
+    volumes:
+      - warehouse:/app/data
+    restart: "no"
+
   api:
     build:
       context: ..
       dockerfile: infra/Dockerfile
+    image: fundos-dw-api:local
     env_file: ../.env
-    # Local only (RNF-03): the API is not meant to be reachable from the network.
-    ports: ["127.0.0.1:8000:8000"]
-    volumes: ["../data:/app/data:ro"]
+    environment:
+      DUCKDB_PATH: /app/data/warehouse.duckdb
+    # Local only (RNF-03): the API is not reachable from the network.
+    ports:
+      - "127.0.0.1:8000:8000"
+    # Read-only mount on top of the read-only DuckDB connection (ADR 004).
+    volumes:
+      - warehouse:/app/data:ro
+    depends_on:
+      warehouse:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  warehouse:
