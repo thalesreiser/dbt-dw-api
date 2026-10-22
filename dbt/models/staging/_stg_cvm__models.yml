@@ -10,67 +10,78 @@ models:
       standardized. Grain: one row per class or subclass per day
       (`cnpj_fundo_classe`, `id_subclasse`, `dt_competencia`); `id_subclasse` is null when the
       report is at class (or fund) level. No rows are dropped. Naming: docs/naming-conventions.md.
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
-          # GROUP BY treats nulls as one group, so a null id_subclasse is handled as a value.
-          combination_of_columns: [cnpj_fundo_classe, id_subclasse, dt_competencia]
+          arguments:
+            # GROUP BY treats nulls as one group, so a null id_subclasse is handled as a value.
+            combination_of_columns: [cnpj_fundo_classe, id_subclasse, dt_competencia]
       # RF-05 (2.3): the report date falls in the reference month of the file it came from.
       - dbt_utils.expression_is_true:
-          expression: "date_trunc('month', dt_competencia) = dt_mes_competencia"
+          arguments:
+            expression: "date_trunc('month', dt_competencia) = dt_mes_competencia"
       # RF-05 (4.1) / RN-02: money in BRL as decimals (never float), dates as DATE, no
       # report dated in the future. Named so scripts/negative_tests.py can assert them.
       - columns_data_type:
           name: rn02_stg_informe_diario_money_is_decimal
-          columns: [vl_total, vl_patrim_liq, vl_captc_dia, vl_resg_dia]
-          data_type: "DECIMAL(18,2)"
+          arguments:
+            columns: [vl_total, vl_patrim_liq, vl_captc_dia, vl_resg_dia]
+            data_type: "DECIMAL(18,2)"
       - columns_data_type:
           name: rn02_stg_informe_diario_quota_is_decimal
-          columns: [vl_quota]
-          data_type: "DECIMAL(27,12)"
+          arguments:
+            columns: [vl_quota]
+            data_type: "DECIMAL(27,12)"
       - columns_data_type:
           name: rn02_stg_informe_diario_dates_are_date
-          columns: [dt_competencia, dt_mes_competencia]
-          data_type: "DATE"
+          arguments:
+            columns: [dt_competencia, dt_mes_competencia]
+            data_type: "DATE"
       - dbt_utils.expression_is_true:
           name: rn02_stg_informe_diario_no_future_date
-          expression: "dt_competencia <= current_date"
+          arguments:
+            expression: "dt_competencia <= current_date"
       - dbt_utils.expression_is_true:
           name: rn02_stg_informe_diario_date_in_reference_month
-          expression: "dt_competencia between dt_mes_competencia and last_day(dt_mes_competencia)"
+          arguments:
+            expression: "dt_competencia between dt_mes_competencia and last_day(dt_mes_competencia)"
       - dbt_utils.expression_is_true:
           name: rn02_stg_informe_diario_flows_not_negative
-          expression: "coalesce(vl_captc_dia, 0) >= 0 and coalesce(vl_resg_dia, 0) >= 0"
+          arguments:
+            expression: "coalesce(vl_captc_dia, 0) >= 0 and coalesce(vl_resg_dia, 0) >= 0"
     columns:
       - name: cnpj_fundo_classe
         description: >
           CNPJ of the class, or of the fund when it reports without a class (not adapted to
           Resolution 175); 14 characters without punctuation. Joins to
           `stg_cvm__cadastro_classes.cnpj_classe`, else to `stg_cvm__cadastro_fundos.cnpj_fundo`.
-        tests: [not_null, valid_cnpj]
+        data_tests: [not_null, valid_cnpj]
       - name: id_subclasse
         description: CVM id of the subclass (15 characters); null for class-level reports.
-        tests:
+        data_tests:
           - dbt_utils.expression_is_true:
-              expression: "is null or regexp_full_match(id_subclasse, '[0-9A-Z]{15}')"
+              arguments:
+                expression: "is null or regexp_full_match(id_subclasse, '[0-9A-Z]{15}')"
       - name: dt_competencia
         description: Reference date of the report (source `DT_COMPTC`).
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              expression: "<= cast(_loaded_at as date)"
+              arguments:
+                expression: "<= cast(_loaded_at as date)"
       - name: tp_fundo_classe
         description: Type of the reporting entity (source `TP_FUNDO_CLASSE`), upper case without accents.
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["CLASSES - FIF", "CLASSE FIF/FAPI", "FI"]
+              arguments:
+                values: ["CLASSES - FIF", "CLASSE FIF/FAPI", "FI"]
               config:
                 severity: warn
       - name: vl_total
         description: >
           Total value of the portfolio, in BRL (decimal 18,2). A few hundred rows per month are
           negative in the source and are kept as reported.
-        tests:
+        data_tests:
           - not_null:
               config:
                 severity: warn
@@ -78,39 +89,41 @@ models:
         description: >
           Share value (cota), in BRL, with the 12 decimal places CVM publishes (decimal 27,12).
           A few hundred rows per month are negative in the source and are kept as reported.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: vl_patrim_liq
         description: Net asset value (patrimônio líquido), in BRL (decimal 18,2).
-        tests: [not_null]
+        data_tests: [not_null]
       - name: vl_captc_dia
         description: Inflows (captação) of the day, in BRL (decimal 18,2); never negative.
-        tests: &non_negative
+        data_tests: &non_negative
           - not_null:
               config:
                 severity: warn
           - dbt_utils.accepted_range:
-              min_value: 0
+              arguments:
+                min_value: 0
       - name: vl_resg_dia
         description: Redemptions (resgates) of the day, in BRL (decimal 18,2); never negative.
-        tests: *non_negative
+        data_tests: *non_negative
       - name: nr_cotst
         description: Number of shareholders (cotistas); never negative.
-        tests: *non_negative
+        data_tests: *non_negative
       - name: dt_mes_competencia
         description: First day of the reference month of the source file (source `competencia`, YYYY-MM).
-        tests: [not_null]
+        data_tests: [not_null]
       - name: _source
         description: Loader source (`cvm` or `p1-parquet`).
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["cvm", "p1-parquet"]
+              arguments:
+                values: ["cvm", "p1-parquet"]
       - name: _source_file
         description: File the row was loaded from.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: _loaded_at
         description: Load timestamp (UTC).
-        tests: [not_null]
+        data_tests: [not_null]
 
   - name: stg_cvm__cadastro_fundos
     description: >
@@ -119,56 +132,62 @@ models:
       (`id_registro_fundo`). The source has one row per fund and manager; fund-level columns are
       identical across those rows, and the manager columns keep the first manager by CPF/CNPJ
       (ADR 006). A CNPJ can have more than one registry id. Naming: docs/naming-conventions.md.
-    tests:
+    data_tests:
       # RF-05 (2.3): the kept manager row and the manager count agree.
       - dbt_utils.expression_is_true:
-          expression: "(nr_gestor = 0) = (cpf_cnpj_gestor is null)"
+          arguments:
+            expression: "(nr_gestor = 0) = (cpf_cnpj_gestor is null)"
       # A PF manager has a CPF (11 digits), a PJ manager a CNPJ (14 characters).
       - dbt_utils.expression_is_true:
-          expression: "tp_pessoa_gestor is null or length(cpf_cnpj_gestor) = case tp_pessoa_gestor when 'PF' then 11 else 14 end"
+          arguments:
+            expression: "tp_pessoa_gestor is null or length(cpf_cnpj_gestor) = case tp_pessoa_gestor when 'PF' then 11 else 14 end"
           config:
             severity: warn
       # A cancellation date exists exactly when the fund is cancelled.
       - dbt_utils.expression_is_true:
-          expression: "(sit_fundo = 'CANCELADO') = (dt_cancelamento is not null)"
+          arguments:
+            expression: "(sit_fundo = 'CANCELADO') = (dt_cancelamento is not null)"
           config:
             severity: warn
     columns:
       - name: id_registro_fundo
         description: CVM registry id of the fund; primary key.
-        tests: [not_null, unique]
+        data_tests: [not_null, unique]
       - name: cnpj_fundo
         description: CNPJ of the fund, 14 characters without punctuation (not unique across registry ids).
-        tests: [not_null, valid_cnpj]
+        data_tests: [not_null, valid_cnpj]
       - name: cd_cvm
         description: CVM code of the fund.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nm_denominacao_social
         description: Legal name of the fund (trimmed, whitespace collapsed).
-        tests: [not_null]
+        data_tests: [not_null]
       - name: tp_fundo
         description: Fund type (e.g. FI, FIDC, FIF, FII, FIP), upper case without accents.
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["FI", "FIDC", "FIF", "FACFIF", "FIP", "FII", "FITVM", "FMIA-CL", "FIAGRO",
-                       "FIIM", "FMIA", "FMP-FGTS", "FMIEE", "FUNCINE", "FAPI", "FMP-FGTS CL",
-                       "FICART", "FMAI", "FI-FGTS"]
+              arguments:
+                values: ["FI", "FIDC", "FIF", "FACFIF", "FIP", "FII", "FITVM", "FMIA-CL", "FIAGRO",
+                         "FIIM", "FMIA", "FMP-FGTS", "FMIEE", "FUNCINE", "FAPI", "FMP-FGTS CL",
+                         "FICART", "FMAI", "FI-FGTS"]
               config:
                 severity: warn
       - name: sit_fundo
         description: Registry status of the fund, upper case without accents.
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["EM FUNCIONAMENTO NORMAL", "FASE PRE-OPERACIONAL", "EM LIQUIDACAO",
-                       "CANCELADO", "INCORPORACAO", "EM SITUACAO ESPECIAL", "EM ANALISE"]
+              arguments:
+                values: ["EM FUNCIONAMENTO NORMAL", "FASE PRE-OPERACIONAL", "EM LIQUIDACAO",
+                         "CANCELADO", "INCORPORACAO", "EM SITUACAO ESPECIAL", "EM ANALISE"]
       - name: dt_registro
         description: Registration date at CVM.
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              expression: "<= cast(_loaded_at as date)"
+              arguments:
+                expression: "<= cast(_loaded_at as date)"
               config:
                 severity: warn
       - name: dt_constituicao
@@ -177,10 +196,11 @@ models:
         description: Cancellation date (null while the fund is not cancelled).
       - name: dt_inicio_situacao
         description: Date the current status started.
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              expression: "<= cast(_loaded_at as date)"
+              arguments:
+                expression: "<= cast(_loaded_at as date)"
               config:
                 severity: warn
       - name: dt_adaptacao_rcvm175
@@ -197,37 +217,40 @@ models:
         description: Director responsible for the fund.
       - name: cnpj_administrador
         description: CNPJ of the administrator, 14 characters without punctuation.
-        tests: [valid_cnpj]
+        data_tests: [valid_cnpj]
       - name: nm_administrador
         description: Name of the administrator.
       - name: tp_pessoa_gestor
         description: Kind of manager kept on this row, PF (natural person) or PJ (legal entity).
-        tests:
+        data_tests:
           - accepted_values:
-              values: ["PF", "PJ"]
+              arguments:
+                values: ["PF", "PJ"]
       - name: cpf_cnpj_gestor
         description: CPF or CNPJ of the manager kept on this row (first by CPF/CNPJ when the fund has several).
-        tests: [valid_cpf_cnpj]
+        data_tests: [valid_cpf_cnpj]
       - name: nm_gestor
         description: Name of the manager kept on this row.
       - name: nr_gestor
         description: Number of distinct managers of the fund in the source (0 when none is listed).
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.accepted_range:
-              min_value: 0
+              arguments:
+                min_value: 0
       - name: _source
         description: Loader source (`cvm` or `p1-parquet`).
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["cvm", "p1-parquet"]
+              arguments:
+                values: ["cvm", "p1-parquet"]
       - name: _source_file
         description: File the row was loaded from.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: _loaded_at
         description: Load timestamp (UTC).
-        tests: [not_null]
+        data_tests: [not_null]
 
   - name: stg_cvm__cadastro_classes
     description: >
@@ -238,87 +261,96 @@ models:
     columns:
       - name: id_registro_classe
         description: CVM registry id of the class; primary key.
-        tests: [not_null, unique]
+        data_tests: [not_null, unique]
       - name: id_registro_fundo
         description: Registry id of the fund the class belongs to.
-        tests:
+        data_tests:
           - not_null
           - relationships:
-              to: ref('stg_cvm__cadastro_fundos')
-              field: id_registro_fundo
+              arguments:
+                to: ref('stg_cvm__cadastro_fundos')
+                field: id_registro_fundo
       - name: cnpj_classe
         description: CNPJ of the class, 14 characters without punctuation; joins to the daily report.
-        tests: [not_null, valid_cnpj]
+        data_tests: [not_null, valid_cnpj]
       - name: cd_cvm
         description: CVM code of the class.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: nm_denominacao_social
         description: Legal name of the class (trimmed, whitespace collapsed).
-        tests: [not_null]
+        data_tests: [not_null]
       - name: tp_classe
         description: Class type, upper case without accents.
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["CLASSES DE COTAS DE FUNDOS FIF", "CLASSES DE COTAS DE FUNDOS FIDC",
-                       "CLASSES DE COTAS DE FUNDOS FIP", "CLASSES DE COTAS DE FUNDOS FII",
-                       "CLASSES DE COTAS DE FUNDOS FIAGRO", "CLASSES DE COTAS DE FUNDOS FIIM",
-                       "CLASSES DE COTAS DE FUNDOS FIF (FAPI)", "CLASSES DE COTAS DE FUNDOS FUNCINE",
-                       "CLASSES DE COTAS DE FUNDOS FICART", "CLASSES DE COTAS DE FUNDOS FIP (FMIEE)"]
+              arguments:
+                values: ["CLASSES DE COTAS DE FUNDOS FIF", "CLASSES DE COTAS DE FUNDOS FIDC",
+                         "CLASSES DE COTAS DE FUNDOS FIP", "CLASSES DE COTAS DE FUNDOS FII",
+                         "CLASSES DE COTAS DE FUNDOS FIAGRO", "CLASSES DE COTAS DE FUNDOS FIIM",
+                         "CLASSES DE COTAS DE FUNDOS FIF (FAPI)", "CLASSES DE COTAS DE FUNDOS FUNCINE",
+                         "CLASSES DE COTAS DE FUNDOS FICART", "CLASSES DE COTAS DE FUNDOS FIP (FMIEE)"]
               config:
                 severity: warn
       - name: sit_classe
         description: Registry status of the class, upper case without accents.
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["EM FUNCIONAMENTO NORMAL", "FASE PRE-OPERACIONAL", "EM LIQUIDACAO",
-                       "CANCELADO", "INCORPORACAO", "EM SITUACAO ESPECIAL", "EM ANALISE"]
+              arguments:
+                values: ["EM FUNCIONAMENTO NORMAL", "FASE PRE-OPERACIONAL", "EM LIQUIDACAO",
+                         "CANCELADO", "INCORPORACAO", "EM SITUACAO ESPECIAL", "EM ANALISE"]
       - name: dt_registro
         description: Registration date at CVM.
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              expression: "<= cast(_loaded_at as date)"
+              arguments:
+                expression: "<= cast(_loaded_at as date)"
               config:
                 severity: warn
       - name: dt_constituicao
         description: Incorporation date of the class.
       - name: dt_inicio
         description: Start date of the class operations.
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              expression: "<= cast(_loaded_at as date)"
+              arguments:
+                expression: "<= cast(_loaded_at as date)"
               config:
                 severity: warn
       - name: dt_inicio_situacao
         description: Date the current status started.
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              expression: "<= cast(_loaded_at as date)"
+              arguments:
+                expression: "<= cast(_loaded_at as date)"
               config:
                 severity: warn
       - name: tp_classificacao
         description: CVM classification (asset class), upper case without accents.
-        tests:
+        data_tests:
           - accepted_values:
-              values: ["MULTIMERCADO", "RENDA FIXA", "ACOES", "CAMBIAL", "FMP-FGTS"]
+              arguments:
+                values: ["MULTIMERCADO", "RENDA FIXA", "ACOES", "CAMBIAL", "FMP-FGTS"]
       - name: tp_classificacao_anbima
         description: ANBIMA classification, upper case without accents.
       - name: nm_indicador_desempenho
         description: Benchmark of the class (e.g. DI de um dia, Ibovespa).
       - name: tp_condominio
         description: Open-ended (ABERTO) or closed-ended (FECHADO) class.
-        tests:
+        data_tests:
           - accepted_values:
-              values: ["ABERTO", "FECHADO"]
+              arguments:
+                values: ["ABERTO", "FECHADO"]
       - name: tp_publico_alvo
         description: Target investors, upper case without accents.
-        tests:
+        data_tests:
           - accepted_values:
-              values: ["PUBLICO GERAL", "QUALIFICADO", "PROFISSIONAL"]
+              arguments:
+                values: ["PUBLICO GERAL", "QUALIFICADO", "PROFISSIONAL"]
       - name: fl_classe_cotas
         description: True when the class invests in shares of other funds (source `Classe_Cotas`).
       - name: fl_exclusivo
@@ -337,28 +369,29 @@ models:
         description: Reference date of `vl_patrim_liq`.
       - name: cpf_cnpj_auditor
         description: CNPJ of the auditor (or CPF of an individual auditor).
-        tests: [valid_cpf_cnpj]
+        data_tests: [valid_cpf_cnpj]
       - name: nm_auditor
         description: Name of the auditor.
       - name: cnpj_custodiante
         description: CNPJ of the custodian, 14 characters without punctuation.
-        tests: [valid_cnpj]
+        data_tests: [valid_cnpj]
       - name: nm_custodiante
         description: Name of the custodian.
       - name: cnpj_controlador
         description: CNPJ of the controller, 14 characters without punctuation.
-        tests: [valid_cnpj]
+        data_tests: [valid_cnpj]
       - name: nm_controlador
         description: Name of the controller.
       - name: _source
         description: Loader source (`cvm` or `p1-parquet`).
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ["cvm", "p1-parquet"]
+              arguments:
+                values: ["cvm", "p1-parquet"]
       - name: _source_file
         description: File the row was loaded from.
-        tests: [not_null]
+        data_tests: [not_null]
       - name: _loaded_at
         description: Load timestamp (UTC).
-        tests: [not_null]
+        data_tests: [not_null]
