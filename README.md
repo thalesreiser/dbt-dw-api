@@ -10,7 +10,7 @@
 
 > A dimensional data warehouse modeled with **dbt** on **DuckDB**, with data quality tests, change history (SCD type 2) and documentation with lineage, served through a read-only **FastAPI** REST API with a tested OpenAPI contract.
 
-**Status:** 🚧 in progress · epic 1 of 7 (foundations)
+**Status:** ✅ complete · 7 of 7 epics · `make up` brings up the warehouse and the API with Docker Compose
 
 ---
 
@@ -196,6 +196,10 @@ curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos/<FUND_CNPJ>/serie?inicio
 curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/rankings/captacao?mes=2026-09&top=10"
 ```
 
+Runnable examples with the responses they gave on the Docker Compose environment (CI job
+`compose`, one CVM month, 2026-09; CNPJs and names replaced by placeholders here, lists cut to
+the first items) are in [Examples](#examples).
+
 **API key and rate limit (RF-10).** Every `/v1/*` route requires the `X-API-Key` header;
 `/health`, `/docs` and `/openapi.json` stay public (Swagger shows the lock and an *Authorize*
 button). Set the key in `.env` (`API_KEY=<long random value>`, e.g. from
@@ -260,6 +264,83 @@ invalid `mes`, `top` or `ordem` gives **422**.
    "nr_cotst_fim_mes": 7, "nr_dias_informados": 21}]}
 ```
 
+### Examples
+
+After `make up` (see [How to run](#how-to-run)), with the key of your `.env`
+(`export API_KEY=...`). The CI job `compose` runs these same calls on every pull request
+([`scripts/compose_smoke.py`](scripts/compose_smoke.py)) and checks the status codes and bodies.
+
+```bash
+curl localhost:8000/health
+```
+
+```json
+{"status": "ok", "database": "reachable", "latest_month": "2026-09-01"}
+```
+
+```bash
+curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos?situacao=em%20funcionamento%20normal&limit=2"
+```
+
+```json
+{"items": [
+  {"cnpj_fundo_classe": "<CNPJ>", "tp_registro": "CLASSE", "cnpj_fundo": "<CNPJ>",
+   "nm_denominacao_social": "<class name>", "nm_denominacao_social_fundo": "<fund name>",
+   "tp_fundo": "FI", "tp_classe": "CLASSES DE COTAS DE FUNDOS FIF",
+   "sit_fundo_classe": "EM FUNCIONAMENTO NORMAL", "tp_classificacao": "RENDA FIXA",
+   "tp_classificacao_anbima": "RENDA FIXA DURACAO LIVRE GRAU DE INVEST.",
+   "tp_condominio": "ABERTO", "tp_publico_alvo": "QUALIFICADO", "fl_exclusivo": false,
+   "cnpj_administrador": "<CNPJ>", "nm_administrador": "<administrator name>",
+   "dt_registro": "2025-05-16", "fl_informa_recente": true},
+  {"...": "second item"}],
+ "limit": 2, "offset": 0, "total": 33815}
+```
+
+```bash
+curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/rankings/captacao?top=3"   # latest month loaded
+```
+
+```json
+{"sk_mes": "2026-09-01", "ordem": "desc", "top": 3, "items": [
+  {"cnpj_fundo_classe": "<CNPJ>", "nm_denominacao_social": "<class name>", "sk_mes": "2026-09-01",
+   "vl_captc_mes": 9720054919.08, "vl_resg_mes": 0.0, "vl_captc_liquida_mes": 9720054919.08,
+   "vl_patrim_liq_fim_mes": 16834666383.36, "nr_cotst_fim_mes": 1, "nr_dias_informados": 21,
+   "posicao": 1},
+  {"cnpj_fundo_classe": "<CNPJ>", "nm_denominacao_social": "<class name>", "sk_mes": "2026-09-01",
+   "vl_captc_mes": 21740265655.22, "vl_resg_mes": 13124390911.25,
+   "vl_captc_liquida_mes": 8615874743.97, "vl_patrim_liq_fim_mes": 46665847370.18,
+   "nr_cotst_fim_mes": 2414, "nr_dias_informados": 21, "posicao": 2},
+  {"...": "third item"}]}
+```
+
+The series of the ranking leader (any CNPJ from the calls above works); without `inicio` and
+`fim` it covers the 12 months up to the latest reported day:
+
+```bash
+CNPJ=$(curl -s -H "X-API-Key: $API_KEY" "localhost:8000/v1/rankings/captacao?top=1" \
+  | python -c "import json, sys; print(json.load(sys.stdin)['items'][0]['cnpj_fundo_classe'])")
+curl -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos/$CNPJ/serie"
+```
+
+```json
+{"cnpj_fundo_classe": "<CNPJ>", "inicio": "2025-10-01", "fim": "2026-09-30", "items": [
+  {"sk_data": "2026-09-01", "id_subclasse": null, "vl_quota": 0.1854692,
+   "vl_patrim_liq": 7090304144.69, "vl_total": 6845753590.39, "vl_captc_dia": 0.0,
+   "vl_resg_dia": 0.0, "vl_captc_liquida_dia": 0.0, "nr_cotst": 1},
+  {"sk_data": "2026-09-02", "id_subclasse": null, "vl_quota": 0.1874198,
+   "vl_patrim_liq": 7164871975.96, "vl_total": 6917191546.55, "vl_captc_dia": 0.0,
+   "vl_resg_dia": 0.0, "vl_captc_liquida_dia": 0.0, "nr_cotst": 1},
+  {"...": "one point per reported day"}]}
+```
+
+Errors:
+
+```bash
+curl -i "localhost:8000/v1/fundos?limit=2"                          # 401 {"detail": "missing X-API-Key header"}
+curl -i -H "X-API-Key: wrong" "localhost:8000/v1/fundos?limit=2"    # 401 {"detail": "invalid API key"}
+curl -i -H "X-API-Key: $API_KEY" "localhost:8000/v1/fundos/99999999999999/serie"  # 404 {"detail": "CNPJ not found"}
+```
+
 ## Quality at every level
 
 | Level | What it guarantees | Tool |
@@ -321,6 +402,7 @@ push to a PR cancels its superseded run. Four jobs run in parallel (typical dura
 | `negative-fixture` | network-free negative suite: clean case passes every dbt test, each invalid case fails exactly its tests | synthetic seeds (`dbt/seeds/negative/`) | ~3.5 min |
 | `sources` | load, freshness, row counts, staging, snapshot, marts, docs coverage, incremental idempotency, negative tests, SCD2 simulation | **two real CVM months** downloaded in the job | ~2.5 min |
 | `api-integration` | `dbt build` of the test warehouse (the "sample": every model and dbt test), 34 integration tests, Schemathesis contract tests | synthetic raw rows (`tests/fixtures/warehouse/`) | ~1 min |
+| `compose` | `make up` (image build, CVM load and `dbt build` in the `warehouse` service, API healthcheck), then the [examples](#examples) and 401 without a key (RNF-04) | **one real CVM month** downloaded in the job | ~1.5 min |
 
 **RNF-02: a failing dbt test fails CI.** Every `dbt build`/`dbt test` runs through plain `make`
 recipes or `subprocess` with the exit code checked, so an `error` test fails the step and the
@@ -330,11 +412,10 @@ that references no model runs only in the two synthetic jobs, which run a full `
 used: the tests declared `severity: warn` flag known quirks of the real CVM data (reported, not
 blocking); every other test is an error.
 
-**Merge gates.** The required status checks are `lint-test`, `negative-fixture` and `sources`.
-`api-integration` (dbt build on the sample, integration and contract tests) is not required yet:
-it must be green before merging, and it should be added to the branch protection of `main`
-(Settings -> Branches -> required status checks: `api-integration`). CodeQL also runs on PRs;
-the `dbt docs` workflow builds on PRs only when it changes.
+**Merge gates.** The required status checks are `lint-test`, `negative-fixture`, `sources` and
+`api-integration`. `compose` is not required (it depends on Docker Hub and the CVM portal) but
+must be green before merging. CodeQL also runs on PRs; the `dbt docs` workflow builds on PRs
+only when it changes.
 
 ## Stack
 
@@ -350,15 +431,33 @@ the `dbt docs` workflow builds on PRs only when it changes.
 
 ## How to run
 
-**Prerequisites:** Docker with Docker Compose and Python 3.11.
+**With Docker (RNF-04).** Prerequisites: Docker with Docker Compose v2, `make` (or run the
+`docker compose` line of the Makefile) and network access to `dados.cvm.gov.br`.
 
 ```bash
-pip install -e ".[dev,dbt]"                              # Python 3.11 environment
-cp .env.example .env                                     # required by `make up` (API settings)
+cp .env.example .env              # then set API_KEY to a long random value (never commit .env)
+make up                           # previous CVM month; or: make up COMPETENCIAS=3 COMPETENCIA=2026-09
+curl localhost:8000/health        # {"status": "ok", ...}; then the examples in "API"
+make down                         # stop; the warehouse volume is kept
+```
+
+`make up` runs [`infra/docker-compose.yml`](infra/docker-compose.yml): the one-shot service
+`warehouse` loads the months into a DuckDB file on the named volume `warehouse` and runs
+`dbt build` (every model, the snapshot and every test). Only if it succeeds does the `api`
+service start (uvicorn, non-root user, the volume mounted read-only, settings from `.env`, port
+bound to `127.0.0.1:8000`), and `make up` returns when its healthcheck on `/health` passes
+(about a minute for one month on CI). Running `make up` again reloads the months and rebuilds
+incrementally; the snapshot keeps its history in the volume.
+`docker compose -f infra/docker-compose.yml down -v` deletes the volume.
+
+**Without Docker** (Python 3.11):
+
+```bash
+pip install -e ".[dev,dbt]"
+cp .env.example .env                                     # API settings (API_KEY...)
 make load                                                # load a CVM month into DuckDB (below)
 make build                                               # dbt build: models + tests
-make up                                                  # start the API on localhost:8000
-curl localhost:8000/health                               # health check
+make api                                                 # API on 127.0.0.1:8000 (with reload)
 ```
 
 The API serves `/health`, `GET /v1/fundos` (RF-07), `GET /v1/fundos/{cnpj}/serie` (RF-08) and
@@ -422,20 +521,51 @@ or the loader: **https://thalesreiser.github.io/dbt-dw-api/** (task 7.3).
 | Epic | Deliverable | Hours | Status |
 |---|---|---|---|
 | 1. Foundations | Repository, `dbt init`, DuckDB profile, vision and requirements | 4 h | ✅ |
-| 2. Sources and staging | Sources with freshness, `stg_` models, basic tests | 6 h | ⬜ |
-| 3. Dimensional model | Star diagram, dimensions, facts, SCD2 snapshot | 10 h | ⬜ |
-| 4. Quality and documentation | Business rule tests, descriptions, `dbt docs`, negative test | 5 h | ⬜ |
-| 5. API | FastAPI, 3 endpoints, API key, rate limit, tests | 9 h | ⬜ |
-| 6. Contract and performance | Schemathesis, p95 measurement | 3 h | ⬜ |
-| 7. CI and publication | Full workflow, ADRs, dbt docs on GitHub Pages | 3 h | ⬜ |
+| 2. Sources and staging | Sources with freshness, `stg_` models, basic tests | 6 h | ✅ |
+| 3. Dimensional model | Star diagram, dimensions, facts, SCD2 snapshot | 10 h | ✅ |
+| 4. Quality and documentation | Business rule tests, descriptions, `dbt docs`, negative test | 5 h | ✅ |
+| 5. API | FastAPI, 3 endpoints, API key, rate limit, tests | 9 h | ✅ |
+| 6. Contract and performance | Schemathesis, p95 measurement | 3 h | ✅ |
+| 7. CI and publication | Full workflow, Docker Compose, ADRs, dbt docs on GitHub Pages | 3 h | ✅ |
 
-## Measured results
+## Results
+
+Measured on CI (GitHub-hosted `ubuntu-latest`) on 2026-10-22 unless noted; how each requirement
+was validated is in [docs/05-validation.md](docs/05-validation.md).
 
 | Metric | Target | Measured |
 |---|---|---|
-| `dbt build` | no failures | — |
-| Marts documented and tested | 100% | — |
+| `dbt build` on real CVM data | no failures | **216 of 216 nodes pass** (206 data tests, 0 warnings, 0 errors) on 2026-09 in the `compose` job; the same in `sources` on two months |
+| Negative tests | invalid data fails the tests | 11 of 11 rule tests fail on tampered rows (`sources`); 9 synthetic cases each fail exactly their expected tests (`negative-fixture`) |
+| Marts documented and tested | 100% | **100%**: every model, snapshot, seed, exposure and column described (`make docs-coverage`); every mart has key and relationship tests |
+| API tests | pass, coverage >= 80% | 202 unit tests, **99%** coverage of `fundos_api`; 34 integration tests over a dbt-built warehouse |
+| OpenAPI contract (Schemathesis) | no violation | **0 violations** on every operation, positive and negative generation |
 | p95 of time-series endpoints | below 300 ms | **54 ms** on CI (2 CVM months, 20 users, 0% errors); 232 ms on a laptop ([performance](docs/performance.md)) |
+| Portability (`make up`) | whole environment via Docker Compose | warehouse built and API healthy in **~1 min** for one month; the [examples](#examples) answer 200, and 401 without a key |
+| Documentation site | published | **https://thalesreiser.github.io/dbt-dw-api/** (dbt docs with lineage) |
+
+## Limitations
+
+- **Single-file DuckDB, single writer.** One process can write the warehouse at a time, so
+  `dbt build` runs with the API stopped or idle (Compose runs it before the API). No concurrent
+  writes and no horizontal scaling without copying the file
+  ([ADR 001](docs/adr/001-duckdb-vs-athena.md), [ADR 004](docs/adr/004-api-direct-duckdb-vs-cache.md)).
+- **Rate limit per process.** The fixed-window counter lives in memory: with N uvicorn workers
+  a key gets up to N times the limit, and a restart resets it. Scaling out needs a shared store.
+- **Local only, no TLS.** The API binds to `127.0.0.1` with one static key from `.env`; no
+  users, scopes or key rotation (out of scope, [01](docs/01-vision-and-scope.md)).
+- **A sample of months.** CI and `make up` load one or two recent months (about 540,000 daily
+  rows each), so the default 12-month series holds only those months; more history means
+  `COMPETENCIAS=N` and a longer load. SCD2 history accumulates only where the DuckDB file
+  persists (the Compose volume) and starts at the first load.
+- **National holidays only.** `fl_dia_util` ignores state and municipal holidays.
+- **CVM data as published.** Some funds still report under a `CANCELADO` registry status, and
+  registry attributes are not corrected; a few `severity: warn` tests flag known quirks without
+  failing.
+- **Athena not implemented.** RNF-04 mentions an optional Athena adapter; only the DuckDB target
+  exists (the models are portable SQL, ADR 001).
+- **Data license.** CVM data is under the ODbL: anything published from it as a database keeps
+  the attribution and share-alike terms (below). The data is never committed here.
 
 ## Documentation
 
