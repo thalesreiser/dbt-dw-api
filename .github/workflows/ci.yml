@@ -120,3 +120,5 @@ jobs:
       - run: pip install -e ".[dev,dbt]"
       - name: API integration tests over the test warehouse
         run: make test-integration
+      - name: OpenAPI contract tests (Schemathesis, task 6.1)
+        run: make test-contract

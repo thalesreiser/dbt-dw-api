@@ -296,6 +296,19 @@ python scripts/build_test_warehouse.py --output data/test_warehouse.duckdb  # wa
 They are marked `integration`, excluded from plain `pytest` and run in the CI job
 `api-integration`; details in [docs/testing.md](docs/testing.md#api-integration-tests).
 
+**Contract tests (task 6.1, RF-11).** Schemathesis generates valid and invalid requests from the
+app's own `/openapi.json` for every operation and checks each response: no 5xx, status code,
+content type, body and headers as documented, invalid input rejected and the API key enforced.
+They run over the same test warehouse:
+
+```bash
+make test-contract  # dbt build of the test warehouse + pytest -m contract (deterministic)
+TEST_WAREHOUSE_PATH=data/test_warehouse.duckdb pytest -m contract --no-cov  # reuse a build
+```
+
+Marked `contract`, excluded from plain `pytest`, run in the CI job `api-integration`; details in
+[docs/testing.md](docs/testing.md#contract-tests-schemathesis).
+
 ## Stack
 
 | Layer | Technology | Why |
